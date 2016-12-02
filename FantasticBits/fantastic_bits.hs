@@ -28,50 +28,31 @@ loop teamId magic = do
     hPutStrLn stderr $ show bludgers
     hPutStrLn stderr $ show wizards
     
-    
     let w1 = wizards !! 0
         w2 = wizards !! 1
         
     let comp a b = compare (entId $ fst a) (entId $ fst b)   
         closest = sortBy comp $ closestSnaffles [w1, w2] snaffles
     
-    hPutStrLn stderr $ show closest                        
-            
-    forM_ closest $ action magic teamId
+    hPutStrLn stderr $ show closest
+    
+    forM closest $ action magic teamId bludgers
             
     loop teamId (magic + 1)
-
-
-action :: Int -> Int -> (Entity, Entity) -> IO ()
-action magic teamId (wizard, snaffle) = do
-    if state wizard == 1 then do 
-        throw wizard teamId
-    else
-        move (wizard, snaffle) 
+            
+action :: Int -> Int -> [Entity] -> (Entity, Entity) -> IO ()
+action magic teamId bludgers (wizard, snaffle) = do
+    let (closestBludger, dist) = findClosest bludgers wizard
+    
+    if magic > 5 && dist < 800 then
+        obliviate $ entId closestBludger
+    else  
+        if state wizard == 1 then do 
+            throw wizard teamId
+        else
+            move (wizard, snaffle)
 
 type Point = (Int, Int)
-
-closestIntersection :: Point -> Point -> Point -> (Int, Int)
-closestIntersection (xa', ya') (x0', y0') (vx', vy') = let xa = fromIntegral xa'
-                                                           ya = fromIntegral ya' 
-                                                           x0 = fromIntegral x0'
-                                                           y0 = fromIntegral y0'
-                                                           vx = fromIntegral vx'
-                                                           vy = fromIntegral vy'
-                                                           t1 = if vx == 0 then (xa-x0)/vy else (vy * (xa - x0) - vx * (ya - y0)) / (vx^2 + vy^2)
-                                                           t2 = if vx == 0 then (ya-y0)/vy else (xa - x0 - vy * t1) / vx
-                                                       in if t2 < 0 then (x0', y0') else (round (x0 + t2 * vx), round (y0 + t2 * vy) )
-                                                       
-lineDistance :: Entity -> Entity -> Float
-lineDistance ent1 wizard = let posSnaffle = pos ent1
-                               posWiz = pos wizard
-                               speedSnaffle = speed ent1
-                               closestPoint = closestIntersection posWiz posSnaffle speedSnaffle
-                               x1 = fst closestPoint
-                               x2 = getX wizard
-                               y1 = snd closestPoint
-                               y2 = getY wizard
-                           in sqrt $ fromIntegral ((x1-x2)^2 + (y1-y2)^2) 
 
 distance :: Entity -> Entity -> Float
 distance ent1 wizard = let x1 = getX ent1
@@ -91,10 +72,10 @@ throw wizard teamId = do
                else (0, 3750)
     putStrLn ("THROW " ++ (show goalX) ++ " " ++ (show goalY) ++ " 500")
     
-findClosestSnaffle :: [Entity] -> Entity -> (Entity, Float)
-findClosestSnaffle snaffles wizard = let comparator a b = compare (snd a) (snd b) 
-                                         dists = map (\s -> (s, distance s wizard)) snaffles
-                                     in minimumBy comparator dists
+findClosest :: [Entity] -> Entity -> (Entity, Float)
+findClosest entities wizard = let comparator a b = compare (snd a) (snd b) 
+                                  dists = map (\s -> (s, distance s wizard)) entities
+                              in minimumBy comparator dists
 
 closestSnaffles :: [Entity] -> [Entity] -> [(Entity, Entity)]
 closestSnaffles (w:[]) (s:[]) = [(w, s)]
@@ -113,7 +94,10 @@ move (w,s) = putStrLn ("MOVE " ++ (show sx) ++ " " ++ (show sy) ++ " 150")
 removeThrownSnaffle :: [Entity] -> Entity -> [Entity]
 removeThrownSnaffle snaffles wizard = let Just thrownSnaffle = find (\sn -> (getX sn == getX wizard) && (getY sn == getY wizard) ) snaffles
                                       in delete thrownSnaffle snaffles
-                                      
+          
+obliviate :: Int -> IO ()
+obliviate bid = putStrLn $ "OBLIVIATE " ++ (show bid)
+
 type Entity = (Int, String, Int, Int, Int, Int, Int)
     
 state :: Entity -> Int
