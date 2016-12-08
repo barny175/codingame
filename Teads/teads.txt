@@ -1,0 +1,41 @@
+input
+
+7
+1 2
+2 3
+3 4
+3 7
+4 5
+4 6
+7 8
+
+
+
+output
+2
+
+
+
+
+
+
+Tree {root = 3, depth = 3 
+    ((2,3) Tree {root = 2, depth = 2 
+          ((1,2) Tree {root = 1, subtrees = [], depth = 1})
+    ((3,4) Tree {root = 4, depth = 2 
+          ((4,5) Tree {root = 5, subtrees = [], depth = 1})
+          ((4,6) Tree {root = 6, subtrees = [], depth = 1})
+    ((3,7) Tree {root = 7, depth = 2 
+          ((7,8) Tree {root = 8, subtrees = [], depth = 1})
+          
+          
+          
+          
+Tree {root = 4, depth = 4, 
+    ((3,4),Tree {root = 3, depth = 3, 
+        ((2,3),Tree {root = 2, depth = 2, 
+            ((1,2),Tree {root = 1, depth = 1, 
+        ((3,7),Tree {root = 7, depth = 2, 
+            ((7,8),Tree {root = 8, depth = 1,
+    ((4,5),Tree {root = 5, depth = 1, 
+    ((4,6),Tree {root = 6, depth = 1
