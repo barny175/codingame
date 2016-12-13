@@ -11,12 +11,13 @@ main = do
 
     -- hPutStrLn stderr $ show $ length relations
 
-    let node = 96
+    let node = 101
     -- let node = fst $ head edges
 
     let tree = buildTree edges node
     hPutStrLn stderr $ "Tree: \n" ++ (show tree)
 
+    hPutStrLn stderr $ show $ getSecondMaxDepth (subtrees tree) 6
     let (result, debug) = findMinDepth tree 0
     hPutStrLn stderr $ debug
     putStrLn $ show $ result
@@ -33,8 +34,8 @@ secondBiggest biggest acc s = let curDepth = depth s
 findMinDepth :: Tree -> Int -> (Int, String)
 findMinDepth tree depthOfSkippedSubtree
     | maxSubtreeCount > 1 = (dpth, "root=" ++ (show $ root tree) ++ " maxsubtreecount=" ++ (show maxSubtreeCount)++ " depth=" ++ (show dpth))
-    | (dpth - 1) < skippedSubtreeDepth = (dpth, "tree=" ++ (show $ root tree) ++ " skipped=" ++ (show skippedSubtreeDepth) ++ " depth=" ++ (show dpth))
-    | otherwise = (recursiveDetph, "root=" ++ (show $ root tree) ++ " subtree=" ++ (show $ root $ head maxSubtree) ++ " subtree depth=" ++ (show $ depth $ head maxSubtree)  ++ "-> " ++ recursiveStr)
+    | (dpth - 1) < skippedSubtreeDepth = (dpth, "tree=" ++ (show $ root tree) ++ " skipped=" ++ (show depthOfSkippedSubtree) ++ " depth=" ++ (show dpth))
+    | otherwise = (recursiveDetph, "root=" ++ (show $ root tree) ++ " skipped=" ++ (show depthOfSkippedSubtree) ++ " subtree=" ++ (show $ root $ head maxSubtree) ++ " subtree depth=" ++ (show $ depth $ head maxSubtree)  ++ "-> " ++ recursiveStr)
     where
         dpth = depth tree
         maxSubtree = getSubtreesByDepth tree (dpth - 1)
