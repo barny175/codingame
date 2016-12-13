@@ -11,13 +11,15 @@ main = do
 
     -- hPutStrLn stderr $ show $ length relations
 
-    -- let node = 1
-    let node = fst $ head edges
+    let node = 96
+    -- let node = fst $ head edges
 
     let tree = buildTree edges node
-    -- hPutStrLn stderr $ "Tree: \n" ++ (show tree)
+    hPutStrLn stderr $ "Tree: \n" ++ (show tree)
 
-    putStrLn $ show $ findMinDepth tree 0
+    let (result, debug) = findMinDepth tree 0
+    hPutStrLn stderr $ debug
+    putStrLn $ show $ result
 
 getSecondMaxDepth :: [Tree] -> Int -> Int
 getSecondMaxDepth sts maxDepth = foldl (secondBiggest maxDepth) 0 sts
@@ -28,18 +30,19 @@ secondBiggest biggest acc s = let curDepth = depth s
                                  then curDepth
                                  else acc
 
-findMinDepth :: Tree -> Int -> Int
+findMinDepth :: Tree -> Int -> (Int, String)
 findMinDepth tree depthOfSkippedSubtree
-  | maxSubtreeCount > 1 = dpth
-  | otherwise = if (dpth - 1) < skippedSubtreeDepth then dpth
-                else findMinDepth (head maxSubtree) skippedSubtreeDepth
-  where
-      dpth = depth tree
-      maxSubtree = getSubtreesByDepth tree (dpth - 1)
-      maxSubtreeCount = length maxSubtree
-      subtrs = subtrees tree
-      secondMaxDepth = (getSecondMaxDepth subtrs (dpth - 1))
-      skippedSubtreeDepth = (max depthOfSkippedSubtree secondMaxDepth) + (if length subtrs == 1 then 1 else 2)
+    | maxSubtreeCount > 1 = (dpth, "root=" ++ (show $ root tree) ++ " maxsubtreecount=" ++ (show maxSubtreeCount)++ " depth=" ++ (show dpth))
+    | (dpth - 1) < skippedSubtreeDepth = (dpth, "tree=" ++ (show $ root tree) ++ " skipped=" ++ (show skippedSubtreeDepth) ++ " depth=" ++ (show dpth))
+    | otherwise = (recursiveDetph, "root=" ++ (show $ root tree) ++ " subtree=" ++ (show $ root $ head maxSubtree) ++ " subtree depth=" ++ (show $ depth $ head maxSubtree)  ++ "-> " ++ recursiveStr)
+    where
+        dpth = depth tree
+        maxSubtree = getSubtreesByDepth tree (dpth - 1)
+        maxSubtreeCount = length maxSubtree
+        subtrs = subtrees tree
+        secondMaxDepth = (getSecondMaxDepth subtrs (dpth - 1))
+        skippedSubtreeDepth = (max depthOfSkippedSubtree secondMaxDepth) + (if length subtrs == 1 then 1 else 2)
+        (recursiveDetph, recursiveStr) = findMinDepth (head maxSubtree) skippedSubtreeDepth
 
 getSubtreesByDepth :: Tree -> Int -> [Tree]
 getSubtreesByDepth tree dpth = filter (\subtree -> depth subtree == dpth) (subtrees tree)
@@ -54,11 +57,11 @@ buildTree edges node = let (edgesFromNode, remainingEdges) = findEdges node edge
 data Tree = Tree { root :: Node
                    , depth :: Int
                    , subtrees :: [Tree]
-                  } deriving (Show)
+                  } -- deriving (Show)
 
--- instance Show Tree where
---    show (Tree root depth subtrees) = if null subtrees then "Tree root=" ++ (show $ root) ++ " depth=" ++ (show $ depth)
---                                      else "Tree root=" ++ (show $ root) ++ " depth=" ++ (show $ depth) ++ "\n" ++ (unlines $ map (\e -> "\t" ++ (show e)) $ subtrees)
+instance Show Tree where
+   show (Tree r d subts) = if null subts then "Tree root=" ++ (show $ r) ++ " depth=" ++ (show $ d)
+                                     else "Tree root=" ++ (show $ r) ++ " depth=" ++ (show $ d) ++ "\n" ++ (unlines $ map (\e -> "\troot=" ++ (show $ root e) ++ " depth=" ++ (show $ depth e)) $ subts)
 
 type Edge = (Int,Int)
 type Node = Int
