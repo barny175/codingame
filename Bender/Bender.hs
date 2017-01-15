@@ -19,15 +19,16 @@ main = do
     let findAt = elemIndex '@'
         Just posY = findIndex (isJust . findAt) rows
         Just posX = findAt $ rows !! posY
-        bender = Bender SOUTH (posX, posY)
+        bender = Bender SOUTH (posX, posY) False
     direction rows bender
     return ()
     
-data Bender = Bender { currentDir :: DIRECTION, pos :: (Int, Int) }
+data Bender = Bender { currentDir :: DIRECTION, pos :: (Int, Int), breaker :: Bool }
+                deriving Show
 
 direction :: [String] -> Bender -> IO ()
 direction rows bender = do 
-    -- hPutStrLn stderr $ show pos
+    -- hPutStrLn stderr $ show bender
     
     nextMove rows bender
 
@@ -42,16 +43,31 @@ nextMove rows bender = do
 tryMove :: [String] -> Bender -> DIRECTION -> Maybe (IO ())
 tryMove rows bender dir = let (newPosX, newPosY) = move (pos bender) dir
                               symbol = (rows !! newPosY) !! newPosX
+                              withoutObstacle = removeX rows (newPosX, newPosY)
+                              isBreaker = breaker bender
                           in case symbol of 
                               '@' -> Just $ putStrLn "LOOP"
                               '$' -> Just $ do putStrLn (show dir); return ()
                               '#' -> Nothing
-                              'X' -> Nothing
-                              _ -> Just $ printAndGo rows $ Bender dir (newPosX, newPosY)
+                              'X' -> if isBreaker
+                                     then Just $ printAndGo withoutObstacle dir $ Bender dir (newPosX, newPosY) isBreaker
+                                     else Nothing
+                              'B' -> Just $ printAndGo rows dir $ Bender dir (newPosX, newPosY) $ not isBreaker
+                              'S' -> Just $ printAndGo rows dir $ Bender SOUTH (newPosX, newPosY) isBreaker
+                              'W' -> Just $ printAndGo rows dir $ Bender WEST (newPosX, newPosY) isBreaker
+                              'E' -> Just $ printAndGo rows dir $ Bender EAST (newPosX, newPosY) isBreaker
+                              'N' -> Just $ printAndGo rows dir $ Bender NORTH (newPosX, newPosY) isBreaker
+                              _ -> Just $ printAndGo rows dir $ Bender dir (newPosX, newPosY) isBreaker
 
-printAndGo :: [String] -> Bender -> IO ()    
-printAndGo rows bender = do
-    putStrLn $ show $ currentDir bender
+removeX :: [String] -> (Int, Int) -> [String]
+removeX rows (posX, posY) = let replace index replacement list = take index list ++ [replacement] ++ ( drop (index + 1) list)
+                                newRow = replace posX ' ' (rows !! posY)
+                            in replace posY newRow rows
+
+printAndGo :: [String] -> DIRECTION -> Bender -> IO ()    
+printAndGo rows dir bender = do
+    -- hPutStrLn stderr $ show bender
+    putStrLn $ show dir
     direction rows bender
     return ()
     
