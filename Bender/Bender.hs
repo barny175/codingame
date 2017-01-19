@@ -16,9 +16,7 @@ main = do
         
     hPutStrLn stderr $ unlines rows
     
-    let findAt = elemIndex '@'
-        Just posY = findIndex (isJust . findAt) rows
-        Just posX = findAt $ rows !! posY
+    let (posX, posY) = head $ findSymbol rows '@'
         bender = newBender SOUTH (posX, posY) False False
     direction rows bender
     return ()
@@ -26,13 +24,25 @@ main = do
 data Bender = Bender { currentDir :: DIRECTION, pos :: (Int, Int), breaker :: Bool, inverted :: Bool }
                 deriving Show
 
+findSymbol rows symbol = 
+    let findAt = elemIndices symbol
+        posY = findIndices (not . null . findAt) rows
+        map' y = map (\x -> (x, y)) $ findAt $ rows !! y
+        poss = concat $ map map' posY
+    in poss
+    
 newBender currentDir pos breaker inverted = Bender currentDir pos breaker inverted
 
 direction :: [String] -> Bender -> IO ()
 direction rows bender = do 
     -- hPutStrLn stderr $ show bender
-    
-    nextMove rows bender
+    let (x,y) = pos bender
+        symbol' = symbol rows x y
+        tPos = head $ findSymbol rows 'T' \\ [(x,y)]
+        b = if symbol' == 'T' 
+            then bender {pos = tPos} 
+            else bender
+    nextMove rows b
 
 nextMove :: [String] -> Bender -> IO ()    
 nextMove rows bender = do
@@ -43,13 +53,15 @@ nextMove rows bender = do
             
         fromJust mv
 
+symbol rows x y= (rows !! y) !! x
+
 tryMove :: [String] -> Bender -> DIRECTION -> Maybe (IO ())
 tryMove rows bender dir = let (newPosX, newPosY) = move (pos bender) dir
-                              symbol = (rows !! newPosY) !! newPosX
+                              symbol' = symbol rows newPosX newPosY
                               withoutObstacle = removeX rows (newPosX, newPosY)
                               isBreaker = breaker bender
                               isInverted = inverted bender
-                          in case symbol of 
+                          in case symbol' of 
                               '@' -> Just $ putStrLn "LOOP"
                               '$' -> Just $ do putStrLn (show dir); return ()
                               '#' -> Nothing
