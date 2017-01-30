@@ -19,7 +19,15 @@ main = do
     let pos = head $ findSymbol rows '@'
         bender = Bender SOUTH pos False False []
         directions = direction rows bender
+    showProgression pos (take 30 directions) rows
     putStrLn $ unlines $ map show directions
+
+showProgression _ [] _ = return ()
+showProgression pos (dir:dirs) rows = do
+    let repl = replaceAt rows pos '*'
+        newPos = move pos dir
+    putStrLn repl
+    showProgression newPos dirs rows
 
 data Bender = Bender { currentDir :: DIRECTION, pos :: (Int, Int), breaker :: Bool, inverted :: Bool, visited :: [(Int, Int , DIRECTION)] }
                 deriving Show
@@ -56,7 +64,7 @@ symbol rows x y= (rows !! y) !! x
 tryMove :: [String] -> Bender -> DIRECTION -> Maybe [DIRECTION]
 tryMove rows bender dir = let (newPosX, newPosY) = move (pos bender) dir
                               symbol' = symbol rows newPosX newPosY
-                              withoutObstacle = removeX rows (newPosX, newPosY)
+                              withoutObstacle = replaceAt rows (newPosX, newPosY) ' '
                               isBreaker = breaker bender
                               isInverted = inverted bender
                           in case symbol' of
@@ -74,9 +82,9 @@ tryMove rows bender dir = let (newPosX, newPosY) = move (pos bender) dir
                               'N' -> Just $ dir : nextMove rows bender { currentDir = NORTH, pos = (newPosX, newPosY) }
                               _ -> Just $ dir : nextMove rows bender { currentDir = dir, pos = (newPosX, newPosY) }
 
-removeX :: [String] -> (Int, Int) -> [String]
-removeX rows (posX, posY) = let replace index replacement list = take index list ++ [replacement] ++ ( drop (index + 1) list)
-                                newRow = replace posX ' ' (rows !! posY)
+replaceAt :: [String] -> (Int, Int) -> [String]
+replaceAt rows (posX, posY) c = let replace index replacement list = take index list ++ [replacement] ++ ( drop (index + 1) list)
+                                newRow = replace posX c (rows !! posY)
                             in replace posY newRow rows
 
 move (posX, posY) SOUTH = (posX, posY + 1)
