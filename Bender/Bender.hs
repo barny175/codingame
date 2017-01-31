@@ -52,17 +52,18 @@ direction rows bender =
     let (x,y) = pos bender
         symbol' = symbol rows x y
         currDir = currentDir bender
-        visited' = bender : visited bender
-        b = bender {visited = visited'}
-    in nextMove rows b
+    in nextMove rows bender
 
 nextMove :: [String] -> Bender -> [DIRECTION]
 nextMove rows bender =
         let dir = currentDir bender
             directions = dir : delete dir ((if inverted bender then reverse else id ) [SOUTH .. WEST])
-            moves = map (tryMove rows bender) directions
+            visited' = bender { visited = [] } : visited bender
+            bender' = bender { visited = visited' }
+            moves = map (tryMove rows bender') directions
+            isLoop = elem bender $ visited bender
             Just mv = find isJust moves
-        in fromJust mv
+        in if isLoop then [LOOP] else fromJust mv
 
 symbol rows x y= (rows !! y) !! x
 
@@ -73,11 +74,8 @@ tryMove rows bender dir = let (newPosX, newPosY) = move (pos bender) dir
                               isBreaker = breaker bender
                               isInverted = inverted bender
                               tPos = head $ findSymbol rows 'T' \\ [(newPosX, newPosY)]
-                              visited' = bender { visited = [] } : visited bender
-                              bender' = bender { pos = (newPosX, newPosY), visited = visited' }
-                              isLoop = elem bender {currentDir = dir, pos = (newPosX,newPosY)} $ visited bender
-                          in if isLoop then Just [LOOP]
-                             else case symbol' of
+                              bender' = bender { pos = (newPosX, newPosY)}
+                          in case symbol' of
                               '@' -> Just [LOOP]
                               '$' -> Just [dir]
                               '#' -> Nothing
