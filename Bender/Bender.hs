@@ -18,22 +18,29 @@ main = do
 
     let pos = head $ findSymbol rows '@'
         bender = Bender SOUTH pos False False []
-        directions = direction rows bender
+        directions = nextMove rows bender
         dirs = fst $ unzip $ directions
         isLoop = LOOP == last dirs
-    showProgression pos $ take 180 directions
-    if isLoop then
-        putStrLn "LOOP"
-    else
-        putStrLn $ unlines $ take 180 $ map show dirs
+    showProgression pos (take 280 directions ) True
+    -- if isLoop then
+    --     putStrLn "LOOP"
+    -- else
+    putStrLn $ unlines $ take 180 $ map show dirs
 
-showProgression _ [] = return ()
-showProgression pos (dir:dirs) = do
+showProgression _ [] _ = return ()
+showProgression pos (dir:dirs) tele = do
     let rows = snd dir
         repl = replaceAt rows pos '*'
         newPos = move pos $ fst dir
+    hPutStrLn stderr $ show $ fst dir
     hPutStrLn stderr $ unlines repl
-    showProgression newPos dirs
+    if tele && symbol rows (fst pos) (snd pos) == 'T' then do
+        let tPos = head $ findSymbol rows 'T' \\ [pos]
+            newPos = move tPos $ fst dir
+        hPutStrLn stderr $ unlines $ replaceAt rows tPos '*'
+        showProgression newPos dirs False
+    else
+        showProgression newPos dirs True
 
 data Bender = Bender { currentDir :: DIRECTION, pos :: (Int, Int), breaker :: Bool, inverted :: Bool, visited :: [(Bender, [String])] }
                 deriving Show
@@ -47,13 +54,6 @@ findSymbol rows symbol =
         map' y = map (\x -> (x, y)) $ findAt $ rows !! y
         poss = concat $ map map' posY
     in poss
-
-direction :: [String] -> Bender -> [(DIRECTION, [String])]
-direction rows bender =
-    let (x,y) = pos bender
-        symbol' = symbol rows x y
-        currDir = currentDir bender
-    in nextMove rows bender
 
 nextMove :: [String] -> Bender -> [(DIRECTION, [String])]
 nextMove rows bender =
@@ -76,6 +76,7 @@ tryMove rows bender dir = let (newPosX, newPosY) = move (pos bender) dir
                               isInverted = inverted bender
                               tPos = head $ findSymbol rows 'T' \\ [(newPosX, newPosY)]
                               bender' = bender { pos = (newPosX, newPosY)}
+                              tBender = bender' { pos = tPos, currentDir = dir }
                           in case symbol' of
                               '@' -> Just [(LOOP, rows)]
                               '$' -> Just [(dir, rows)]
@@ -84,7 +85,7 @@ tryMove rows bender dir = let (newPosX, newPosY) = move (pos bender) dir
                               'X' -> if isBreaker
                                      then Just $ (dir, rows) : nextMove withoutObstacle bender'
                                      else Nothing
-                              'T' -> Just $ (dir, rows) : nextMove rows bender' { pos = tPos }
+                              'T' -> Just $ (dir, rows) : nextMove rows tBender
                               'B' -> Just $ (dir, rows) : nextMove rows bender' { breaker = (not isBreaker) }
                               'S' -> Just $ (dir, rows) : nextMove rows bender' { currentDir = SOUTH}
                               'W' -> Just $ (dir, rows) : nextMove rows bender' { currentDir = WEST}
