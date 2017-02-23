@@ -25,7 +25,7 @@ main = do
     -- if isLoop then
     --     putStrLn "LOOP"
     -- else
-    putStrLn $ unlines $ take 180 $ map show dirs
+    putStrLn $ unlines $ map show dirs
 
 showProgression _ [] _ = return ()
 showProgression pos (dir:dirs) tele = do
@@ -75,7 +75,7 @@ tryMove rows bender dir = let (newPosX, newPosY) = move (pos bender) dir
                               isBreaker = breaker bender
                               isInverted = inverted bender
                               tPos = head $ findSymbol rows 'T' \\ [(newPosX, newPosY)]
-                              bender' = bender { pos = (newPosX, newPosY)}
+                              bender' = bender { pos = (newPosX, newPosY), currentDir = dir }
                               tBender = bender' { pos = tPos, currentDir = dir }
                           in case symbol' of
                               '@' -> Just [(LOOP, rows)]
