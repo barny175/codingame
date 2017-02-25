@@ -49,7 +49,7 @@ loop dists = do
         neutralFacts = filtFact 0
         closestN = closest myFacts neutralFacts dists (\x y -> borgs x /= 0 && borgs x > borgs y) 
         opFacts = filtFact (-1)
-        closestO = closest myFacts opFacts dists (\x y -> borgs x /= 0)
+        closestO = closest myFacts opFacts dists (\x y -> borgs x /= 0 && borgs x > borgs y)
         closestA = closestN ++ closestO
     hPutStrLn stderr $ show facts
     hPutStrLn stderr $ show closestN
