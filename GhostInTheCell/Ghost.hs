@@ -3,6 +3,8 @@ import Control.Monad
 import Data.List
 import Data.Maybe
 
+data Game = Game { dists :: [(Int, Int, Int)] , bombs :: Int } deriving Show
+
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering -- DO NOT REMOVE
@@ -20,11 +22,11 @@ main = do
         let distance = read (input!!2) :: Int
         return (factory1, factory2, distance)
     
-    hPutStrLn stderr $ show dists
+    -- hPutStrLn stderr $ show dists
     
-    loop dists
+    loop $ Game dists 2
 
-loop dists = do
+loop game = do
     input_line <- getLine
     let entitycount = read input_line :: Int -- the number of entities (e.g. factories and troops)
     
@@ -42,23 +44,32 @@ loop dists = do
     
     let filtType tp = filter (\(_, t, _, _, _) -> t == tp) entities
         facts = map (\(eid, _, player, bs, prod) -> Factory eid bs prod player) $ filtType "FACTORY"
-        factsWithTroops = map 
         troops = filtType "TROOP"
         filtFact n = filter ((== n) .player ) facts
         myFacts = filtFact 1
         neutralFacts = filtFact 0
-        closestN = closest myFacts neutralFacts dists (\x y -> borgs x /= 0 && borgs x > borgs y) 
+        -- sorting (x,y) = (dist x y (dists game), borgs y - borgs x)
+        -- sorting (x,y) = (borgs y - borgs x, dist x y (dists game))
+        sorting (x,y) = dist x y (dists game)
+        -- sorting (x,y) = (borgs y, dist x y (dists game))
+        closestN = closest myFacts neutralFacts (dists game) (\x y -> borgs x /= 0) sorting
         opFacts = filtFact (-1)
-        closestO = closest myFacts opFacts dists (\x y -> borgs x /= 0 && borgs x > borgs y)
+        closestO = closest myFacts opFacts (dists game) (\x y -> borgs x /= 0) sorting
         closestA = closestN ++ closestO
-    hPutStrLn stderr $ show facts
-    hPutStrLn stderr $ show closestN
-    hPutStrLn stderr $ show closestO
+        bombing = bombCommand opFacts myFacts game
+        
+    let commands = "WAIT": map move closestA ++ bombing
+    putStrLn $ concat $ intersperse ";" commands
     
-    putStrLn $ concat $ intersperse ";" ("WAIT": map move closestA)
-    
-    loop dists
+    loop game { bombs = bombs game - length bombing }
 
+bombCommand :: [Factory] -> [Factory] -> Game -> [String]
+bombCommand opFacts myFacts game =
+    let toBomb = maximumBy (\x y -> compare (prod x) (prod y)) opFacts
+        closestFact = head $ closest myFacts [toBomb] (dists game) (\_ _ -> True) (\(x, y) -> dist x y (dists game))
+        bomb opFact = "BOMB " ++ (show $ eid $ fst closestFact) ++ " " ++ (show $ eid opFact)
+    in if bombs game == 0 then [] else [bomb toBomb]
+    
 move (f1, f2) = "MOVE " ++ (show $ eid f1) ++ " " ++ (show $ eid f2) ++ " " ++ (show 1)
              where bs = 1 + (max 0 (borgs f2))
     
@@ -71,19 +82,12 @@ dist f1 f2 dists = let id1 = eid f1
                        id2 = eid f2
                        dist' = find (\(e1, e2, d) -> (e1 == id1 && e2 == id2) || (e1 == id2 && e2 == id1)) dists
                    in (\(_,_,d) -> d) <$> dist'
-
-
-nubIt :: [(Int, Factory, Factory)] -> [(Int, Factory, Factory)]                               
-nubIt [] = []
-nubIt (x:xs) = let rest = filter ((/= (second x)).second) xs
-                   second (_, y, _) = y
-               in x : (nubIt rest)
                
-closest :: [Factory] -> [Factory] -> [(Int, Int, Int)] -> (Factory -> Factory -> Bool) -> [(Factory, Factory)]    
-closest facts1 facts2 dists cond = let ds = [(fromJust d, f1, f2) | f1 <- facts1, f2 <- facts2, 
-                                             let d = dist f1 f2 dists, 
-                                             isJust d,
-                                             cond f1 f2]
-                                       first (d, _, _) = d
-                                       sorted = sortOn first ds
-                                    in map (\(_, e, f) -> (e, f)) sorted
+-- closest :: [Factory] -> [Factory] -> [(Int, Int, Int)] -> (Factory -> Factory -> Bool) -> [(Factory, Factory)]    
+closest facts1 facts2 dists cond sorting 
+    = let ds = [(f1, f2) | f1 <- facts1, f2 <- facts2, 
+                let d = dist f1 f2 dists, 
+                isJust d,
+                cond f1 f2]
+          sorted = sortOn sorting ds
+      in sorted
