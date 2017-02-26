@@ -48,27 +48,28 @@ loop game = do
         filtFact n = filter ((== n) .player ) facts
         myFacts = filtFact 1
         neutralFacts = filtFact 0
-        -- sorting (x,y) = (dist x y (dists game), borgs y - borgs x)
-        -- sorting (x,y) = (borgs y - borgs x, dist x y (dists game))
-        sorting (x,y) = dist x y (dists game)
-        -- sorting (x,y) = (borgs y, dist x y (dists game))
-        closestN = closest myFacts neutralFacts (dists game) (\x y -> borgs x /= 0) sorting
+        closestN = closest myFacts neutralFacts (dists game) (\x y -> borgs x /= 0)
         opFacts = filtFact (-1)
-        closestO = closest myFacts opFacts (dists game) (\x y -> borgs x /= 0) sorting
+        closestO = closest myFacts opFacts (dists game) (\x y -> borgs x /= 0)
         closestA = closestN ++ closestO
-        bombing = bombCommand opFacts myFacts game
-        
+        bombsOnWay = map (\(bid, _, plid, _, targetFact) -> Bomb bid plid targetFact) $ filtType "BOMB"
+        bombing = bombCommand opFacts myFacts game bombsOnWay
+    
+    -- hPutStrLn stderr $ show bombsOnWay
+    
     let commands = "WAIT": map move closestA ++ bombing
     putStrLn $ concat $ intersperse ";" commands
     
     loop game { bombs = bombs game - length bombing }
 
-bombCommand :: [Factory] -> [Factory] -> Game -> [String]
-bombCommand opFacts myFacts game =
-    let toBomb = maximumBy (\x y -> compare (prod x) (prod y)) opFacts
-        closestFact = head $ closest myFacts [toBomb] (dists game) (\_ _ -> True) (\(x, y) -> dist x y (dists game))
+-- bombCommand :: [Factory] -> [Factory] -> Game -> [String]
+bombCommand opFacts myFacts game bombsOnWay =
+    let isTarget f = isJust $ find (\b -> eid f == targetFact b && plid b == 1) bombsOnWay
+        possibleTargets = filter (\f -> not $ isTarget f) opFacts
+        toBomb = maximumBy (\x y -> compare (prod x) (prod y)) possibleTargets
+        closestFact = head $ closest myFacts [toBomb] (dists game) (\_ _ -> True)
         bomb opFact = "BOMB " ++ (show $ eid $ fst closestFact) ++ " " ++ (show $ eid opFact)
-    in if bombs game == 0 then [] else [bomb toBomb]
+    in if bombs game == 0 || null possibleTargets then [] else [bomb toBomb]
     
 move (f1, f2) = "MOVE " ++ (show $ eid f1) ++ " " ++ (show $ eid f2) ++ " " ++ (show 1)
              where bs = 1 + (max 0 (borgs f2))
@@ -78,16 +79,19 @@ data Factory = Factory { eid :: Int, borgs :: Int, prod :: Int, player :: Int} d
 
 data Troop = Troop {tid:: Int, playerid :: Int, target :: Int, troopBorgs :: Int, arrives :: Int}
 
+data Bomb = Bomb { bid :: Int, plid :: Int, targetFact :: Int } deriving Show
+
 dist f1 f2 dists = let id1 = eid f1
                        id2 = eid f2
                        dist' = find (\(e1, e2, d) -> (e1 == id1 && e2 == id2) || (e1 == id2 && e2 == id1)) dists
                    in (\(_,_,d) -> d) <$> dist'
                
 -- closest :: [Factory] -> [Factory] -> [(Int, Int, Int)] -> (Factory -> Factory -> Bool) -> [(Factory, Factory)]    
-closest facts1 facts2 dists cond sorting 
+closest facts1 facts2 dists cond 
     = let ds = [(f1, f2) | f1 <- facts1, f2 <- facts2, 
                 let d = dist f1 f2 dists, 
                 isJust d,
                 cond f1 f2]
+          sorting (x,y) = dist x y dists
           sorted = sortOn sorting ds
       in sorted
