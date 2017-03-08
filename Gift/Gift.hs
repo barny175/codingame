@@ -8,19 +8,17 @@ readInt i = read i :: Int
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering -- DO NOT REMOVE
-
+    --
     -- input_line <- getLine
     -- let n = readInt input_line
     -- price <- readInt <$> getLine
-
-    let price = 100
-        budgets = [40, 40, 40]
-        -- budgets = [100, 1, 60]
-
-    hPutStrLn stderr $ show price
+    --
+    -- hPutStrLn stderr $ show price
     -- budgets <- replicateM n $ readInt <$> getLine
-
-    hPutStrLn stderr $ show budgets
+    --
+    let price = 216
+        budgets = [40, 40, 40, 30, 30, 30, 5, 1] -- 216
+    -- hPutStrLn stderr $ show budgets
 
     let suma = sum budgets
         grouped = reverse . group . sort $ budgets
@@ -57,5 +55,5 @@ divide (b:bs:bbs) overPrice = let (result,rest) = subtractOverPrice b overPrice 
                                   ar = applyRest result rest
                                   len = length b
                               in if rest < len
-                                 then ar
+                                 then ar ++ bs ++ (concat bbs)
                                  else divide ((result++bs) : bbs) rest
