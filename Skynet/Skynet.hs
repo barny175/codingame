@@ -4,9 +4,17 @@ import Data.Maybe
 import Data.List
 import Data.Function
 
-edges = [(6,2),(7,3),(6,3),(5,3),(3,4),(7,1),(2,0),(0,1),(0,3),(1,3),(2,3),(7,4),(6,5)]
+edges = [(5,1),(1,2),(2,3),(3,4),(4,5),(0,1),(0,2),(0,3),(0,4),(0,5),(5,7),(1,8),(2,9),(3,10),(10,6),(7,8),(8,9),(3,9),(2,8),(4,10),(7,12),(4,14),(14,6),(13,5),(13,6),(1,15),(6,16),(7,17),(17,6),(10,18),(9,19),(6,11),(12,1),(7,20),(21,9),(21,10),(21,3)]
+gateways = [11,12,15,16,18,19,20]
 
-gateways = [4,5]
+-- edges = [(0, 1), (1,2), (0, 3), (3,2)]
+-- gateways = [2]
+
+-- edges = [(0, 1), (1,2), (0, 3), (3,2), (0, 2)]
+-- gateways = [2]
+
+-- edges = [(0, 1), (1,2), (2, 5), (0, 3), (3,2), (3, 5)]
+-- gateways = [5]
 
 si = 0
 
@@ -50,7 +58,7 @@ loop edges gateways = do
     hPutStrLn stderr $ show pathsToGw
 
     let shortest = minimumBy (compare `on` length) pathsToGw
-
+        p = last shortest
 
     hPutStrLn stderr $ show p
 
@@ -77,7 +85,9 @@ attachEdge e [] = []
 attachEdge e (p:ps) = (e:p) : (attachEdge e ps)
 
 findPathsToGw :: Int -> [Edge] -> [Int] -> [Path]
-findPathsToGw node edges gateways =
+findPathsToGw node edges gateways
+  | node `elem` gateways = []
+  | otherwise =
     let (edgesFromNode', remainingEdges) = edgesFromNode edges node
         directPathsToGw = map pure $ filter (edgeEndsInGw gateways) edgesFromNode'
         secondNode e = if fst e == node then snd e else fst e
