@@ -4,8 +4,8 @@ import Data.Maybe
 import Data.List
 import Data.Function
 
-edges = [(5,1),(1,2),(2,3),(3,4),(4,5),(0,1),(0,2),(0,3),(0,4),(0,5),(5,7),(1,8),(2,9),(3,10),(10,6),(7,8),(8,9),(3,9),(2,8),(4,10),(7,12),(4,14),(14,6),(13,5),(13,6),(1,15),(6,16),(7,17),(17,6),(10,18),(9,19),(6,11),(12,1),(7,20),(21,9),(21,10),(21,3)]
-gateways = [11,12,15,16,18,19,20]
+-- edges = [(5,1),(1,2),(2,3),(3,4),(4,5),(0,1),(0,2),(0,3),(0,4),(0,5),(5,7),(1,8),(2,9),(3,10),(10,6),(7,8),(8,9),(3,9),(2,8),(4,10),(7,12),(4,14),(14,6),(13,5),(13,6),(1,15),(6,16),(7,17),(17,6),(10,18),(9,19),(6,11),(12,1),(7,20),(21,9),(21,10),(21,3)]
+-- gateways = [11,12,15,16,18,19,20]
 
 -- edges = [(0, 1), (1,2), (0, 3), (3,2)]
 -- gateways = [2]
@@ -13,8 +13,8 @@ gateways = [11,12,15,16,18,19,20]
 -- edges = [(0, 1), (1,2), (0, 3), (3,2), (0, 2)]
 -- gateways = [2]
 
--- edges = [(0, 1), (1,2), (2, 5), (0, 3), (3,2), (3, 5)]
--- gateways = [5]
+edges = [(0, 1), (0,2), (2, 4), (1, 3), (3,4), (1, 4), (1,2), (2,5), (0,3)]
+gateways = [4, 5]
 
 si = 0
 
@@ -57,7 +57,10 @@ loop edges gateways = do
 
     hPutStrLn stderr $ show pathsToGw
 
-    let shortest = minimumBy (compare `on` length) pathsToGw
+    let lengthComparator = compare `on` length
+        gwsForPath p = countEdgesToGateway (getGatewayFromPath p gateways) edges
+        gwCountComparator = compare `on` gwsForPath
+        shortest = minimumBy (lengthComparator `mappend` gwCountComparator) pathsToGw
         p = last shortest
 
     hPutStrLn stderr $ show p
@@ -70,11 +73,18 @@ loop edges gateways = do
 
     loop remainingEdges gateways
 
+countEdgesToGateway g edges = length $ filter (flip edgeEndsInNode g) edges
+
+getGatewayFromPath p gateways = if last1 `elem` gateways then last1 else last2
+                                where (last1, last2) = last p
+
 type Edge = (Int, Int)
 type Path =[Edge]
 
+edgeEndsInNode e n = fst e == n || snd e == n
+
 edgeEndsInGw :: [Int] -> Edge -> Bool
-edgeEndsInGw gws e = any (\g -> (g == (snd e)) || (g == (fst e))) gws
+edgeEndsInGw gws e = any (edgeEndsInNode e) gws
 
 edgesFromNode :: [Edge] -> Int -> ([Edge], [Edge])
 edgesFromNode edges node = partition startsIn edges
