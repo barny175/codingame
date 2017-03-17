@@ -1,36 +1,78 @@
 import System.IO
 import Control.Monad
 import Data.List
-import qualified Data.Map as Map
-
-edges = [(0, 1), (1, 2), (2, 3), (2, 4)]
 
 main :: IO ()
 main = do
+    hSetBuffering stdout NoBuffering -- DO NOT REMOVE
+    
     input_line <- getLine
     let n = read input_line :: Int -- the number of adjacency relations
-    let readInt i = read i ::Int
+    
+    edges <- replicateM n $ do
+        input_line <- getLine
+        let input = words input_line
+        let xi = read (input!!0) :: Int -- the ID of a person which is adjacent to yi
+        let yi = read (input!!1) :: Int -- the ID of a person which is adjacent to xi
+        return (xi, yi)
+    
+    -- hPutStrLn stderr $ show $ length edges
+    
+    let tree = buildTree edges (fst $ head edges)
+    
+    -- hPutStrLn stderr $ show $ tree
+    -- hPutStrLn stderr $ debug
+    putStrLn $ show $ findMinDepth tree 0
 
-    -- edges <- replicateM n $ do
-    --     input <- map (readInt).words <$> getLine
-    --     return (input!!0, input!!1)
+getSecondMaxDepth :: [Tree] -> Int -> Int
+getSecondMaxDepth sts maxDepth = foldl (secondBiggest maxDepth) 0 sts
 
-    -- hPutStrLn stderr $ show $ length relations
+secondBiggest :: Int -> Int -> Tree -> Int
+secondBiggest biggest acc s = let curDepth = depth s
+                              in if curDepth > acc && curDepth < biggest
+                                 then curDepth
+                                 else acc
 
-    let tree = buildMap edges
 
-    putStrLn $ show $ "result"
+findMinDepth :: Tree -> Int -> Int
+findMinDepth tree depthOfSkippedSubtree
+    | maxSubtreeCount > 1 = dpth
+    | (dpth - 1) < skippedSubtreeDepth = dpth
+    | otherwise = findMinDepth (head maxSubtree) skippedSubtreeDepth
+    where
+        dpth = depth tree
+        maxSubtree = getSubtreesByDepth tree (dpth - 1)
+        maxSubtreeCount = length maxSubtree
+        subtrs = subtrees tree
+        secondMaxDepth = (getSecondMaxDepth subtrs (dpth - 1))
+        skippedSubtreeDepth = (max depthOfSkippedSubtree (secondMaxDepth + 1)) + 1
 
-newPath (e1, e2) (f1, f2)
-    | e1 == f1  = (e2, f2)
-    | e1 == f2  = (e2, f1)
-    | e2 == f1  = (e1, f2)
-    | e2 == f2  = (e1, f1)
+getSubtreesByDepth :: Tree -> Int -> [Tree]
+getSubtreesByDepth tree dpth = filter (\subtree -> depth subtree == dpth) (subtrees tree)
 
-insertEdge e@(e1, e2) m =
-    let toInsert = Map.filterWithKey (\(f1, f2) k -> e1 == f1 || e2 == f1 || e1 == f2 || e2 == f2) m
-        insert k v m = Map.insert (newPath k e) (v+1) m
-        newMap = Map.insert e 1 m
-    in Map.foldrWithKey insert newMap toInsert
+buildTree :: [Edge] -> Node -> Tree
+buildTree [] node = Tree node 0 []
+buildTree edges node = let (edgesFromNode, remainingEdges) = findEdges node edges
+                           subtrees = map (\e -> buildTree remainingEdges $ secondNode node e) edgesFromNode
+                           maxDepth = if null subtrees then 0 else (maximum $ map depth subtrees) + 1
+                       in Tree node maxDepth subtrees
 
-buildMap edges = foldr insertEdge Map.empty edges
+data Tree = Tree { root :: Node
+                   , depth :: Int
+                   , subtrees :: [Tree]
+                  } deriving (Show)
+
+-- instance Show Tree where
+--    show (Tree root depth subtrees) = if null subtrees then "Tree root=" ++ (show $ root) ++ " depth=" ++ (show $ depth)
+--                                      else "Tree root=" ++ (show $ root) ++ " depth=" ++ (show $ depth) ++ "\n" ++ (unlines $ map (\e -> "\t" ++ (show e)) $ subtrees)
+
+type Edge = (Int,Int)
+type Node = Int
+
+secondNode :: Node -> Edge -> Node
+secondNode node edge = if fst edge == node
+                       then snd edge
+                       else fst edge
+
+findEdges :: Int -> [Edge] -> ([Edge], [Edge])
+findEdges node rels = partition (\(a,b) -> a == node || b == node) rels
