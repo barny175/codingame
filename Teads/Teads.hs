@@ -1,28 +1,35 @@
 import System.IO
 import Control.Monad
 import Data.List
+import qualified Data.Map as Map
 
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering -- DO NOT REMOVE
-    
+
     input_line <- getLine
     let n = read input_line :: Int -- the number of adjacency relations
-    
-    edges <- replicateM n $ do
-        input_line <- getLine
-        let input = words input_line
+
+    edges <- readEdges n
+    hPutStrLn stderr $ show edges
+
+    -- let tree = buildTree edges (fst $ head edges)
+
+    -- putStrLn $ show $ findMinDepth tree 0
+
+readEdges :: Int -> IO (Map.Map Int Int)
+readEdges n
+    | n == 0 = return Map.empty
+    | otherwise = do
+        input <- words <$> getLine
         let xi = read (input!!0) :: Int -- the ID of a person which is adjacent to yi
-        let yi = read (input!!1) :: Int -- the ID of a person which is adjacent to xi
-        return (xi, yi)
-    
-    -- hPutStrLn stderr $ show $ length edges
-    
-    let tree = buildTree edges (fst $ head edges)
-    
-    -- hPutStrLn stderr $ show $ tree
-    -- hPutStrLn stderr $ debug
-    putStrLn $ show $ findMinDepth tree 0
+            yi = read (input!!1) :: Int -- the ID of a person which is adjacent to xi
+            newEdges = Map.fromList [(xi, yi), (yi, xi)]
+        if n > 0 then do
+            restOfEdges <- readEdges $ n-1
+            return $ Map.union newEdges restOfEdges
+        else
+            return newEdges
 
 getSecondMaxDepth :: [Tree] -> Int -> Int
 getSecondMaxDepth sts maxDepth = foldl (secondBiggest maxDepth) 0 sts
