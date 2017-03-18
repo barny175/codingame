@@ -17,19 +17,24 @@ main = do
 
     -- putStrLn $ show $ findMinDepth tree 0
 
-readEdges :: Int -> IO (Map.Map Int Int)
+addEdge m e1 e2
+    = let f v Nothing = Just [v]
+          f v (Just vs) = Just $ v:vs
+      in Map.alter (f e2) e1 m
+
+readEdges :: Int -> IO (Map.Map Int [Int])
 readEdges n
     | n == 0 = return Map.empty
     | otherwise = do
         input <- words <$> getLine
         let xi = read (input!!0) :: Int -- the ID of a person which is adjacent to yi
             yi = read (input!!1) :: Int -- the ID of a person which is adjacent to xi
-            newEdges = Map.fromList [(xi, yi), (yi, xi)]
         if n > 0 then do
             restOfEdges <- readEdges $ n-1
-            return $ Map.union newEdges restOfEdges
+            let mapWithNewEdge = addEdge restOfEdges xi yi
+            return $ addEdge mapWithNewEdge yi xi
         else
-            return newEdges
+            return $ Map.fromList [(xi, [yi]), (yi, [xi])]
 
 getSecondMaxDepth :: [Tree] -> Int -> Int
 getSecondMaxDepth sts maxDepth = foldl (secondBiggest maxDepth) 0 sts
