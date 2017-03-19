@@ -17,7 +17,7 @@ main = do
     let node = fst (head $ Map.toList edges)
         tree = buildTree edges node (Set.singleton node)
 
-    hPutStrLn stderr $ show tree
+    -- hPutStrLn stderr $ show tree
     let minDepth = findMinDepth tree 0
     hPutStrLn stderr $ show minDepth
     putStrLn $ show $ fst minDepth
@@ -70,7 +70,10 @@ findMinDepth tree depthOfSkippedSubtree
         maxSubtreeCount = length maxSubtree
         subtrs = subtrees tree
         secondMaxDepth = (getSecondMaxDepth subtrs (dpth - 1))
-        skippedSubtreeDepth = (max depthOfSkippedSubtree (secondMaxDepth + 1)) + 1
+        skippedSubtreeDepth = if length subtrs == 1 && depthOfSkippedSubtree == 0
+                              then 1
+                              else (max depthOfSkippedSubtree (secondMaxDepth + 1)) + 1
+
 
 getSubtreesByDepth :: Tree -> Int -> [Tree]
 getSubtreesByDepth tree dpth = filter (\subtree -> depth subtree == dpth) (subtrees tree)
