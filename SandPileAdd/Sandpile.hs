@@ -1,11 +1,14 @@
 import System.IO
 import Control.Monad
+import Data.List
 
 readInt c = read [c] ::Int
 
-m1 = [[1, 2, 1], [2, 0, 2], [1, 2, 1]]
+-- m1 = [[1, 2, 1], [2, 0, 2], [1, 2, 1]]
+-- m2 = [[0, 2, 0],[2, 0, 2],[0, 2, 0]]
 
-m2 = [[0, 2, 0],[2, 0, 2],[0, 2, 0]]
+m1 = [[3, 1, 1, 3], [1, 2, 2, 1], [1, 2, 2, 1], [3, 1, 1, 3]]
+m2 = [[1, 0, 0, 2], [0, 3, 0, 0], [0, 0, 3, 0], [2, 0, 0, 1]]
 
 main :: IO ()
 main = do
@@ -14,8 +17,8 @@ main = do
     -- Auto-generated code below aims at helping you parse
     -- the standard input according to the problem statement.
 
-    input_line <- getLine
-    let n = read input_line :: Int
+    -- input_line <- getLine
+    -- let n = read input_line :: Int
 
     -- m1 <- replicateM n $ (map readInt) <$> getLine
     --
@@ -26,17 +29,19 @@ main = do
 
     putStrLn $ showMatrix (add m1 m2)
 
-findGT4 m = [(i, j) | i <- [0..2], j <- [0..2], (m !! i) !! j >= 4]
+findGT4 m = [(i, j) | i <- [0..n], j <- [0..n], (m !! i) !! j >= 4]
+            where n = length m - 1
 
 showMatrix m = let showLine = concat . map show
-               in unlines $ map showLine m
+               in concat $ intersperse "\n" $ map showLine m
 
-neighbours i j = filter (\(k, l) -> k >= 0 && k <= 2 && l>= 0 && l <= 2) [(i-1, j), (i+1, j), (i, j-1), (i, j+1)]
+neighbours i j n = filter (\(k, l) -> k >= 0 && k <= (n-1) && l>= 0 && l <= (n-1)) [(i-1, j), (i+1, j), (i, j-1), (i, j+1)]
 
 scatter m [] = m
-scatter m gt4 = let (i, j) = head gt4
-                    neighbrMatrices = map (uncurry matrixWithSandAt) (neighbours i j)
-                    neighrbsSum = foldr matrixSum (replicate 3 zeros) neighbrMatrices
+scatter m gt4 = let n = length m
+                    (i, j) = head gt4
+                    neighbrMatrices = map (uncurry (matrixWithSandAt n)) (neighbours i j n)
+                    neighrbsSum = foldr matrixSum (replicate n (zeros n)) neighbrMatrices
                     subtractedMat = applyToElemAt m i j (subtract 4)
                 in add subtractedMat neighrbsSum
 
@@ -45,11 +50,11 @@ applyToElemAt m i j f = let element = f (m !! i !! j)
                             modifiedLine = (take j lnToModify) ++ [element] ++ (drop (j+1) lnToModify)
                         in (take i m) ++ [modifiedLine] ++ (drop (i+1) m)
 
-zeros = replicate 3 0
+zeros n = replicate n 0
 
-matrixWithSandAt i j
-    = let line = (replicate j 0) ++ [1] ++ (replicate (3-j-1) 0)
-      in (replicate i zeros) ++ [line] ++ (replicate (3-i-1) zeros)
+matrixWithSandAt n i j
+    = let zeroM = replicate n (replicate n 0)
+      in applyToElemAt zeroM i j (\_ -> 1)
 
 matrixSum m1 m2 = let lineAdd = zipWith (+)
                   in zipWith lineAdd m1 m2
