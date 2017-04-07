@@ -1,19 +1,35 @@
 import System.IO
-import Data.List
+import Control.Monad
+import Text.Printf
 
-n = 2
-
-timestamps = ["3:55", "3:48"]
-
+main :: IO ()
 main = do
-    let ts = map timestampToSec timestamps
-        result = foldl updateTime (5 * 60, 1) ts
-    -- hPutStrLn stderr $ show result
-    putStrLn $ secToTimestamp (fst result)
+    hSetBuffering stdout NoBuffering -- DO NOT REMOVE
 
-updateTime (t, p) newTs =
-    let newStart = start newTs p
-    in (newStart, p + 1)
+    -- Auto-generated code below aims at helping you parse
+    -- the standard input according to the problem statement.
+
+    input_line <- getLine
+    let n = read input_line :: Int
+
+    timestamps <- replicateM n $ do
+        timestamp <- getLine
+        return (timestamp)
+
+    let ts = map timestampToSec timestamps
+        result = foldl updateTime (0, 1) ts
+    -- hPutStrLn stderr $ show result
+    if n == 0 then
+        putStrLn "NO GAME"
+    else
+        putStrLn $ secToTimestamp (fst result)
+
+updateTime (t, p) newTs
+    | t > newTs = (t, p)
+    | p == 7 = (newTs, p)
+    | otherwise = let newStart = start newTs p
+                  in (newStart, p + 1)
+
 
 start time players = let t = fromIntegral time
                          p = fromIntegral players
@@ -28,4 +44,4 @@ timestampToSec ts
       in min * 60 + sec
 
 secToTimestamp sec = let (m, s) = sec `divMod` 60
-                   in (show m) ++ ":" ++ (show s)
+                   in printf "%d:%02d" m s
