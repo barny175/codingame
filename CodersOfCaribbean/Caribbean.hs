@@ -36,9 +36,12 @@ loop = do
     entities <- readEntities entitycount
     
     let (ships, barrels) = partition (\x -> case x of Barrel _ _ _ _ -> False; _ -> True ) entities 
-        closest' = closest barrels ships
-    hPutStrLn stderr $ show barrels    
-    forM_ closest' $ \(b, sh) -> do
+        myShips = filter ((==1) . owner) ships
+        closest' = closest myShips barrels
+    hPutStrLn stderr $ unlines (map show closest')
+
+    forM_ closest' $ \(sh, b) -> do
+        hPutStrLn stderr $ show (bid b)
         putStrLn ("MOVE "++ (show $ x b) ++ " " ++ (show $ y b))
         return ()
     
@@ -57,9 +60,10 @@ distance ent1 ent2 =
     in sqrt $ fromIntegral ((x1-x2)^2 + (y1-y2)^2) 
 
 findClosest :: [Entity] -> Entity -> (Entity, Float)
-findClosest entities wizard = let comparator a b = compare (snd a) (snd b) 
-                                  dists = map (\s -> (s, distance s wizard)) entities
-                              in minimumBy comparator dists
+findClosest entities ent = 
+    let comparator a b = compare (snd a) (snd b) 
+        dists = map (\s -> (s, distance s ent)) entities
+    in minimumBy comparator dists
 
 closest :: [Entity] -> [Entity] -> [(Entity, Entity)]
 closest (w:[]) (s:[]) = [(w, s)]
