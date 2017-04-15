@@ -20,11 +20,11 @@ readEntities entitycount =
         let arg2 = read (input!!5) :: Int
         let arg3 = read (input!!6) :: Int
         let owner = read (input!!7) :: Int
-        if entitytype == "SHIP" then
-            return $ Ship { sid = entityid, x = x, y = y, rotation = arg1, speed = arg2, rum = arg3, owner = owner }
-        else
-            return $ Barrel { bid = entityid, x = x, y = y, amount = arg1}
-       
+        case entitytype of
+            "SHIP" -> return $ Ship { sid = entityid, x = x, y = y, rotation = arg1, speed = arg2, rum = arg3, owner = owner, etype = entitytype }
+            "BARREL" -> return $ Barrel { bid = entityid, x = x, y = y, amount = arg1, etype = entitytype }
+            "CANNONBALL"-> return $ Cannonball { cbid = entityid, x = x, y = y, owner = arg1, tti = arg2, etype = entitytype }
+            "MINE" -> return $ Mine { mid = entityid, x = x, y = y, etype = entitytype  }
        
 loop :: IO ()
 loop = do
@@ -35,20 +35,25 @@ loop = do
     
     entities <- readEntities entitycount
     
-    let (ships, barrels) = partition (\x -> case x of Barrel _ _ _ _ -> False; _ -> True ) entities 
+    let ships = filter ((== "SHIP").etype) entities 
+        barrels =  filter ((== "BARREL").etype) entities 
         myShips = filter ((==1) . owner) ships
         closest' = closest myShips barrels
     hPutStrLn stderr $ unlines (map show closest')
 
-    forM_ closest' $ \(sh, b) -> do
-        hPutStrLn stderr $ show (bid b)
-        putStrLn ("MOVE "++ (show $ x b) ++ " " ++ (show $ y b))
-        return ()
-    
+    if null closest' then
+        putStrLn "WAIT"
+    else
+        forM_ closest' $ \(sh, b) -> do
+            hPutStrLn stderr $ show (bid b)
+            putStrLn ("MOVE "++ (show $ x b) ++ " " ++ (show $ y b))
+        
     loop
     
-data Entity = Ship {sid :: Int, x :: Int, y :: Int, rotation :: Int, speed :: Int, rum :: Int, owner :: Int }
-              | Barrel {bid :: Int, x :: Int, y :: Int, amount :: Int }
+data Entity = Ship {sid :: Int, x :: Int, y :: Int, rotation :: Int, speed :: Int, rum :: Int, owner :: Int, etype :: String }
+              | Barrel {bid :: Int, x :: Int, y :: Int, amount :: Int, etype :: String  }
+              | Mine { mid :: Int, x :: Int, y :: Int, etype :: String  }
+              | Cannonball { cbid :: Int, x :: Int, y :: Int, tti :: Int , owner :: Int, etype :: String  }
               deriving (Show, Eq)
 
 distance :: Entity -> Entity -> Float
@@ -66,8 +71,9 @@ findClosest entities ent =
     in minimumBy comparator dists
 
 closest :: [Entity] -> [Entity] -> [(Entity, Entity)]
-closest (w:[]) (s:[]) = [(w, s)]
 closest [] _ = []
+closest _ [] = []
+closest (w:[]) (s:[]) = [(w, s)]
 closest wizards snaffles = 
     let distances = [(w, s, distance w s)| w <- wizards, s <- snaffles]
         comparator (w1, s1, d1) (w2, s2, d2) = compare d1 d2
