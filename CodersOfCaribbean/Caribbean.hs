@@ -46,25 +46,30 @@ loop = do
     let ships = filter ((== "SHIP").etype) entities
         barrels =  filter ((== "BARREL").etype) entities
         (myShips, hisShips) = partition ((==1) . owner) ships
-        closest' = closest myShips barrels
 
-    let myShip = head myShips
-        hisShip = head hisShips
-        shipDist = cubeDistance (x myShip, y myShip) (x hisShip, y hisShip)
-        firePos = fire myShip hisShip
+    let fireShips' = fireShips myShips hisShips
+        firePoss = filter (isJust.fst) $ map (\(ms, hs) -> (fire ms hs, sid ms)) fireShips'
+        firingShips = snd $ unzip firePoss
+        shipsToBarrel = filter (\s -> sid s `notElem` firingShips) myShips
 
-    if shipDist < 10 && canFire myShip && isJust firePos then do
-        let (Just fp) = firePos
+    forM_ firePoss $ \(Just fp, _) -> do
         putStrLn ("FIRE " ++ (show $ fst fp) ++ " " ++ (show $ snd fp))
+
+    let closest' = sortBy (compare `on` (sid . fst)) $ closest shipsToBarrel barrels
+    hPutStrLn stderr $ show closest'
+    if null closest' then
+        forM_ myShips $ \_ -> putStrLn "WAIT"
     else
-        if null closest' then
-            putStrLn "WAIT"
-        else
-            forM_ closest' $ \(sh, b) -> do
-                hPutStrLn stderr $ show (bid b)
-                putStrLn ("MOVE "++ (show $ x b) ++ " " ++ (show $ y b))
+        forM_ closest' $ \(sh, b) -> do
+            hPutStrLn stderr $ show (bid b)
+            putStrLn ("MOVE "++ (show $ x b) ++ " " ++ (show $ y b))
 
     loop
+
+fireShips myShips hisShips
+    = let closestShips = closest myShips hisShips
+          toFire (myShip, hisShip) = rum myShip > 50 && (distance myShip hisShip) < 10 && canFire myShip
+      in filter toFire closestShips
 
 directions_even = [[1, 0], [0, (-1)], [(-1), (-1)], [(-1), 0], [(-1), 1], [0, 1]]
 directions_odd = [[1, 0], [1, (-1)], [0, -1], [(-1), 0], [0, 1], [1, 1]]
@@ -93,15 +98,10 @@ fire from to =
         cbpos = sortBy (compare `on` (abs.fst) ) travelTimes
     in snd <$> listToMaybe cbpos
 
-distance :: Entity -> Entity -> Float
-distance ent1 ent2 =
-    let x1 = x ent1
-        x2 = x ent2
-        y1 = y ent1
-        y2 = y ent2
-    in sqrt $ fromIntegral ((x1-x2)^2 + (y1-y2)^2)
+distance :: Entity -> Entity -> Int
+distance ent1 ent2 = cubeDistance (x ent1, y ent1) (x ent2, y ent2)
 
-findClosest :: [Entity] -> Entity -> (Entity, Float)
+findClosest :: [Entity] -> Entity -> (Entity, Int)
 findClosest entities ent =
     let comparator a b = compare (snd a) (snd b)
         dists = map (\s -> (s, distance s ent)) entities
