@@ -3,12 +3,13 @@ import Control.Monad
 import Data.List
 import Data.Function
 import Data.Maybe
+import qualified Data.Map as M
 
 main :: IO ()
 main = do
     hSetBuffering stdout NoBuffering -- DO NOT REMOVE
 
-    loop
+    loop M.empty
 
 data Entity = Ship {sid :: Int, x :: Int, y :: Int, orientation :: Int, speed :: Int, rum :: Int, owner :: Int, etype :: String, canFire :: Bool }
               | Barrel {bid :: Int, x :: Int, y :: Int, amount :: Int, etype :: String  }
@@ -34,18 +35,31 @@ readEntities entitycount =
             "CANNONBALL"-> return $ Cannonball { cbid = entityid, x = x, y = y, owner = arg1, tti = arg2, etype = entitytype }
             "MINE" -> return $ Mine { mid = entityid, x = x, y = y, etype = entitytype  }
 
-loop :: IO ()
-loop = do
+type ShipMap = M.Map Int Entity
+
+updateShips :: ShipMap -> [Entity] -> ShipMap
+updateShips shipMap ships
+    = M.fromList $ map (\s -> (sid s, updateShip shipMap s)) ships
+
+updateShip :: ShipMap -> Entity -> Entity
+updateShip shipMap ship
+    = let foundShip = M.lookup (sid ship) shipMap
+      in maybe ship (\s -> ship { canFire = canFire (fromJust foundShip) }) foundShip
+
+loop :: ShipMap  -> IO ()
+loop shipMap = do
     input_line <- getLine
     let myshipcount = read input_line :: Int -- the number of remaining ships
     input_line <- getLine
     let entitycount = read input_line :: Int -- the number of entities (e.g. ships, mines or cannonballs)
 
     entities <- readEntities entitycount
-
+    
     let ships = filter ((== "SHIP").etype) entities
         barrels =  filter ((== "BARREL").etype) entities
-        (myShips, hisShips) = partition ((==1) . owner) ships
+        (myShips', hisShips) = partition ((==1) . owner) ships
+        newShipMap = updateShips shipMap myShips'
+        myShips = snd $ unzip (M.toList newShipMap)
 
     let fireShips' = fireShips myShips hisShips
         firePoss = filter (isJust.fst) $ map (\(ms, hs) -> (fire ms hs, sid ms)) fireShips'
@@ -56,7 +70,6 @@ loop = do
         putStrLn ("FIRE " ++ (show $ fst fp) ++ " " ++ (show $ snd fp))
 
     let closest' = sortBy (compare `on` (sid . fst)) $ closest shipsToBarrel barrels
-    hPutStrLn stderr $ show closest'
     if null closest' then
         forM_ myShips $ \_ -> putStrLn "WAIT"
     else
@@ -64,7 +77,7 @@ loop = do
             hPutStrLn stderr $ show (bid b)
             putStrLn ("MOVE "++ (show $ x b) ++ " " ++ (show $ y b))
 
-    loop
+    loop $ M.mapWithKey (\k s -> if isJust $ find ((==k).sid.fst) fireShips' then s { canFire = False } else s {canFire = True }) newShipMap
 
 fireShips myShips hisShips
     = let closestShips = closest myShips hisShips
