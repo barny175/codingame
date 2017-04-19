@@ -54,7 +54,7 @@ loop shipMap = do
     let entitycount = read input_line :: Int -- the number of entities (e.g. ships, mines or cannonballs)
 
     entities <- readEntities entitycount
-    
+    -- hPutStrLn stderr $ unlines $ map show entities
     let ships = filter ((== "SHIP").etype) entities
         barrels =  filter ((== "BARREL").etype) entities
         (myShips', hisShips) = partition ((==1) . owner) ships
@@ -66,18 +66,25 @@ loop shipMap = do
         firingShips = snd $ unzip firePoss
         shipsToBarrel = filter (\s -> sid s `notElem` firingShips) myShips
 
+    hPutStrLn stderr $ show shipsToBarrel
     forM_ firePoss $ \(Just fp, _) -> do
         putStrLn ("FIRE " ++ (show $ fst fp) ++ " " ++ (show $ snd fp))
 
     let closest' = sortBy (compare `on` (sid . fst)) $ closest shipsToBarrel barrels
-    if null closest' then
-        forM_ myShips $ \_ -> putStrLn "WAIT"
+    if null closest' then do
+        let closestOpponent = sortBy (compare `on` (sid . fst)) $ closest shipsToBarrel hisShips
+        if null closestOpponent then
+            forM_ shipsToBarrel $ \_ -> putStrLn "WAIT"
+        else
+            move closestOpponent
     else
-        forM_ closest' $ \(sh, b) -> do
-            hPutStrLn stderr $ show (bid b)
-            putStrLn ("MOVE "++ (show $ x b) ++ " " ++ (show $ y b))
+        move closest'
 
     loop $ M.mapWithKey (\k s -> if isJust $ find ((==k).sid.fst) fireShips' then s { canFire = False } else s {canFire = True }) newShipMap
+
+move ents
+    = forM_ ents $ \(sh, b) -> do
+        putStrLn ("MOVE "++ (show $ x b) ++ " " ++ (show $ y b))
 
 fireShips myShips hisShips
     = let closestShips = closest myShips hisShips
