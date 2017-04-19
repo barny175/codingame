@@ -99,10 +99,12 @@ neighbour x y orientation = if y `mod` 2 == 1 then
                            else
                               (x + directions_even !! orientation !! 0, y + directions_even !! orientation !! 1)
 
-futurePos ship 1 = neighbour (x ship) (y ship) (orientation ship)
-futurePos ship t =
-    let (nx, ny) = if speed ship == 1 then neighbour (x ship) (y ship) (orientation ship) else (x ship, y ship)
-    in futurePos ship {x = nx, y = ny } (t - 1)
+futurePos ship t
+    | t == 1 = neighbour (x ship) (y ship) (orientation ship)
+    | speed ship == 0 = (x ship, y ship)
+    | otherwise =
+        let (nx, ny) = if speed ship == 1 then neighbour (x ship) (y ship) (orientation ship) else (x ship, y ship)
+        in futurePos ship {x = nx, y = ny } (t - 1)
 
 bow s = neighbour (x s) (y s) (orientation s)
 
