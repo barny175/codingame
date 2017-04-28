@@ -37,12 +37,6 @@ struct Position {
     }
 };
 
-enum Bool {
-    True,
-    False,
-    NotDecidedYet
-};
-
 void printVec(const vector<int>& v, ostream& out) {
     copy (v.begin(), v.end(), ostream_iterator<int>(out, ", "));
     out << endl;
@@ -142,9 +136,6 @@ class Manor {
         Position pos = initial_pos(rowOrCol, direction);
         //cerr << "count creatures at " << rowOrCol << endl;
         while (isValid(pos)) {
-            if(manor[pos.row][pos.col] == '.')
-                return -1;
-                
             if (isVisible(pos, mirror))
                 creatures++;
                 
@@ -157,33 +148,15 @@ class Manor {
         return creatures;
     }
 
-    Bool vecEqual(vector<int> v1, vector<int> v2) {
-        if (v1.size() != v2.size())
-            return False;
-            
-        for (int i = 0; i < v1.size(); i++) {
-            if (v1[i] == -1 || v2[i] == -1)
-                return NotDecidedYet;
-                
-            if (v1[i] != v2[i])
-                return False;
-        }
-        return True;
+    bool vecEqual(vector<int> v1, vector<int> v2) {
+        return equal(v1.begin(), v1.end(), v2.begin());
     }
     
-    Bool check() {
-        Bool res = vecEqual(canSeeFrom(Left), canSeeFromRight);
-        if (res != True)
-            return res;
-        
-        res = vecEqual(canSeeFrom(Up), canSeeFromBottom);
-        if (res != True)
-            return res;
-        
-        res = vecEqual(canSeeFrom(Down), canSeeFromTop);
-        if (res != True)
-            return res;
-        return vecEqual(canSeeFrom(Right), canSeeFromLeft);
+    bool check() {
+        return vecEqual(canSeeFrom(Up), canSeeFromBottom)
+            && vecEqual(canSeeFrom(Down), canSeeFromTop)
+            && vecEqual(canSeeFrom(Left), canSeeFromRight)
+            && vecEqual(canSeeFrom(Right), canSeeFromLeft);
     }    
 public:
     Manor() {
@@ -223,39 +196,37 @@ public:
             cout << manor[i];
             cout << endl;
         }
+        cout << endl;
     }
     
-    Bool find(int level = 0) {
-        if (level == emptyPlaces.size() || level > 3) {
-            Bool res = check();
-            
-            if (res == True) {
+    bool find(int level = 0) {
+        if (level == emptyPlaces.size()) {
+            if (check()) {
                 print();
-                return True;
-            } else if (res == False) {
-                cerr << res << " " << level << endl;
-                return res;
+                return true;
+            } else {
+                return false;
             }
         }
         
         int r, c;
         tie(r, c) = emptyPlaces[level];
-        // cerr << "level: " << level << " r: " << r << " c: " << c << endl;    
+        //cerr << "level: " << level << " r: " << r << " c: " << c << endl;    
     
         for (int k = 0; k < 4; k++) {
             if (counts[k] > 0) {
                 counts[k]--;
                 manor[r][c] = creatures[k];
                 //cerr << " k: " << k << "['" << creatures[k] << "']" << endl;
-                Bool res = find(level + 1);
-                if (res == True) {
-                    return True;
-                } 
+                if (find(level + 1)) {
+                    return true;
+                }
                 counts[k]++;
                 manor[r][c] = '.';
             }
         }
-        return False;
+
+        return false;
     }
 
 };
