@@ -19,10 +19,7 @@ import java.util.stream.IntStream;
  * @author mbarnas
  */
 public class Solution {
-
-	private static List<Position> emptyPlaces = new ArrayList<>();
-
-	private int size;
+	private final int size;
 	Map<Direction, List<Integer>> canSee;
 	char[][] manor;
 	private List<Equation> equations;
@@ -38,17 +35,19 @@ public class Solution {
 	}
 
 	public static void main(String[] args) {
-		StringReader sr = new StringReader("9 3 4\n"
-				+ "5\n"
-				+ "3 0 3 0 3\n"
-				+ "1 2 1 4 0\n"
-				+ "3 4 1 0 2\n"
-				+ "1 0 5 0 0\n"
-				+ ".\\./.\n"
-				+ "..../\n"
-				+ "\\....\n"
-				+ ".\\/.\\\n"
-				+ "./../");
+		StringReader sr = new StringReader("5 14 5\n" +
+"7\n" +
+"2 6 4 7 2 4 2\n" +
+"0 0 0 4 0 0 0\n" +
+"2 4 0 1 1 1 0\n" +
+"4 4 2 4 4 1 5\n" +
+"..\\....\n" +
+"..../..\n" +
+"/.//\\.\\\n" +
+"/\\./\\\\.\n" +
+"\\\\.\\\\.\\\n" +
+"\\\\/.../\n" +
+"./\\./\\.");
 //		Scanner in = new Scanner(System.in);
 		Scanner in = new Scanner(sr);
 		Map<Creature, Integer> counts = new HashMap<>();
@@ -65,11 +64,6 @@ public class Solution {
 		char[][] manorTemplate = new char[size][];
 		for (int i = 0; i < size; i++) {
 			manorTemplate[i] = in.nextLine().toCharArray();
-			for (int j = 0; j < manorTemplate[i].length; j++) {
-				if (manorTemplate[i][j] == '.') {
-					emptyPlaces.add(new Position(i, j, Direction.Up));
-				}
-			}
 		}
 
 		Solution manor = new Solution(size, canSee, manorTemplate, counts);
@@ -176,45 +170,31 @@ public class Solution {
 				.collect(Collectors.toList());
 	}
 
-	private Bool check() {
-		Bool allTrue = Bool.True;
-		for (Equation e : this.equations) {
-			Bool res = checkEquation(e);
-			if (res == Bool.NotDecidedYet) {
-				return res;
-			}
-			allTrue = allTrue.and(res);
-		}
-		return allTrue;
-	}
-
 	private void print() {
-		for (int i = 0; i < manor.length; i++) {
-			for (int j = 0; j < manor[i].length; j++) {
-				System.out.print(manor[i][j]);
+		for (char[] line : manor) {
+			for (int j = 0; j < line.length; j++) {
+				System.out.print(line[j]);
 			}
 			System.out.println();
 		}
 	}
 
-	private Bool checkEquation(Equation e) {
-		if (e.elements.stream().anyMatch(el -> manor[el.row][el.col] == '.')) {
-			return Bool.NotDecidedYet;
-		}
-
-		int sum = e.elements.stream()
-				.mapToInt(el -> {
-					if (el.isVisible(Creature.fromChar(manor[el.row][el.col]))) {
-						return 1;
-					} else {
-						return 0;
-					}
-				}).sum();
-		return Bool.fromBoolean(sum == e.result);
-	}
-
 	private void find() {
 		findSolution(0, 0, 0);
+	}
+
+	private void completeWithUnusedCreatures() {
+		this.counts.entrySet().stream()
+				.filter(e -> e.getValue() > 0)
+				.findFirst()
+				.ifPresent(e -> {
+					for (char[] line : manor) {
+						for (int i = 0; i < line.length; i++) {
+							if (line[i] == '.')
+								line[i] = e.getKey().getChar();
+						}
+					}
+				});
 	}
 
 	private class Equation {
@@ -259,10 +239,16 @@ public class Solution {
 				return c.directlyVisible;
 			}
 		}
+
+		@Override
+		public String toString() {
+			return "EquationElement{" + "row=" + row + ", col=" + col + ", mirror=" + mirror + '}';
+		}
 	}
 
 	boolean findSolution(int equationIndex, int elementIndex, int currentSum) {
 		if (equationIndex == this.equations.size()) {
+			completeWithUnusedCreatures();
 			print();
 			return true;
 		}
@@ -378,22 +364,4 @@ public class Solution {
 			throw new IllegalArgumentException();
 		}
 	};
-
-	enum Bool {
-
-		True,
-		False,
-		NotDecidedYet;
-
-		static Bool fromBoolean(boolean b) {
-			return b ? True : False;
-		}
-
-		private Bool and(Bool val) {
-			if (this == True && val == True) {
-				return True;
-			}
-			return False;
-		}
-	}
 }
