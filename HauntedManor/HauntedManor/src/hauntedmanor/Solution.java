@@ -11,6 +11,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  *
@@ -23,7 +25,7 @@ public class Solution {
 	private int size;
 	Map<Direction, List<Integer>> canSee;
 	char[][] manor;
-	private final List<Equation> equations;
+	private List<Equation> equations;
 	Map<Creature, Integer> counts;
 
 	public Solution(int size, Map<Direction, List<Integer>> canSee, char[][] manorTemplate, Map<Creature, Integer> counts) {
@@ -160,11 +162,16 @@ public class Solution {
 	}
 
 	private void compileEquations() {
-		this.canSee.forEach((dir, counts) -> {
-			for (int i = 0; i < counts.size(); i++) {
-				equations.add(compileEquation(i, dir, counts.get(i)));
-			}
-		});
+		this.equations = this.canSee.entrySet().stream()
+				.flatMap(e -> {
+					Direction dir = e.getKey();
+					List<Integer> counts = e.getValue();
+					return IntStream.range(0, counts.size())
+							.mapToObj(i -> compileEquation(i, dir, counts.get(i)));
+				})
+				.filter(e -> e.elements.size() > 0)
+				.sorted((e1, e2) -> Integer.compare(e1.elements.size(), e2.elements.size()))
+				.collect(Collectors.toList());
 	}
 
 	private boolean check() {
