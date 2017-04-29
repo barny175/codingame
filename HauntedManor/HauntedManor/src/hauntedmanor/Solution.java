@@ -73,7 +73,7 @@ public class Solution {
 		}
 
 		Solution manor = new Solution(size, canSee, manorTemplate, counts);
-		manor.find(0);
+		manor.find();
 	}
 
 	private static List<Integer> readInts(int size, Scanner in) {
@@ -149,7 +149,7 @@ public class Solution {
 	Equation compileEquation(int rowOrCol, Direction direction, int result) {
 		boolean mirror = false;
 		Position pos = initialPos(rowOrCol, direction);
-		Equation equation = new Equation(direction);
+		Equation equation = new Equation(rowOrCol, direction);
 		while (isValid(pos)) {
 			if (isMirror(pos)) {
 				mirror = true;
@@ -213,12 +213,18 @@ public class Solution {
 		return Bool.fromBoolean(sum == e.result);
 	}
 
+	private void find() {
+		findSolution(0, 0, 0);
+	}
+
 	private class Equation {
 
 		Direction dir;
+		int rowCol;
 
-		public Equation(Direction dir) {
+		public Equation(int rowCol, Direction dir) {
 			this.dir = dir;
+			this.rowCol = rowCol;
 		}
 
 		int result;
@@ -230,9 +236,8 @@ public class Solution {
 
 		@Override
 		public String toString() {
-			return "Equation{" + "dir=" + dir + ", result=" + result + '}';
+			return "Equation{" + "dir=" + dir + ", rowCol=" + rowCol + ", result=" + result + '}';
 		}
-
 	}
 
 	private class EquationElement {
@@ -256,31 +261,41 @@ public class Solution {
 		}
 	}
 
-	boolean find(int level) {
-        if (level > 3 || level == emptyPlaces.size()) {
-			final Bool res = check();
-			if (res == Bool.True) {
-				print();
-				return true;
-			} else if (res == Bool.False) {
+	boolean findSolution(int equationIndex, int elementIndex, int currentSum) {
+		if (equationIndex == this.equations.size()) {
+			print();
+			return true;
+		}
+		
+		Equation equation = this.equations.get(equationIndex);
+		if (elementIndex == equation.elements.size()) {
+			if (currentSum == equation.result) {
+				return findSolution(equationIndex + 1, 0, 0);
+			} else {
 				return false;
 			}
 		}
+		
+		EquationElement el = equation.elements.get(elementIndex);
+		if (manor[el.row][el.col] == '.') {
+			for (Creature c : Creature.values()) {
+				if (counts.get(c) > 0) {
+					if (el.isVisible(c) && (currentSum+1) > equation.result)
+						continue;
 
-		Position pos = emptyPlaces.get(level);
-		for (Creature c : Creature.values()) {
-			if (counts.get(c) > 0) {
-				counts.put(c, counts.get(c) - 1);
-				manor[pos.row][pos.col] = c.getChar();
-				if (find(level + 1)) {
-					return true;
+					counts.put(c, counts.get(c) - 1);
+					manor[el.row][el.col] = c.getChar();
+					if (findSolution(equationIndex, elementIndex + 1, currentSum + (el.isVisible(c) ? 1 : 0))) {
+						return true;
+					}
+					counts.put(c, counts.get(c) + 1);
+					manor[el.row][el.col] = '.';
 				}
-				counts.put(c, counts.get(c) + 1);
-				manor[pos.row][pos.col] = '.';
 			}
-		}
-
-		return false;
+			return false;
+		} 
+		currentSum += el.isVisible(Creature.fromChar(manor[el.row][el.col])) ? 1 : 0;
+		return findSolution(equationIndex, elementIndex + 1, currentSum);
 	}
 
 	enum Creature {
@@ -289,7 +304,7 @@ public class Solution {
 		Vampire(true, false),
 		Ghost(false, true);
 
-		private static Creature fromChar(char first) {
+		static Creature fromChar(char first) {
 			for (Creature c : Creature.values()) {
 				if (c.name().charAt(0) == first) {
 					return c;
@@ -301,12 +316,12 @@ public class Solution {
 		boolean directlyVisible;
 		boolean visibleInMirror;
 
-		private Creature(boolean directlyVisible, boolean visibleInMirror) {
+		Creature(boolean directlyVisible, boolean visibleInMirror) {
 			this.directlyVisible = directlyVisible;
 			this.visibleInMirror = visibleInMirror;
 		}
 
-		private char getChar() {
+		char getChar() {
 			return this.name().charAt(0);
 		}
 	}
