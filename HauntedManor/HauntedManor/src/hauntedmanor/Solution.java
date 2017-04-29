@@ -38,15 +38,17 @@ public class Solution {
 	}
 
 	public static void main(String[] args) {
-		StringReader sr = new StringReader("0 3 3\n"
-				+ "3\n"
-				+ "2 1 2\n"
-				+ "2 1 0\n"
-				+ "1 2 2\n"
-				+ "2 2 0\n"
-				+ "../\n"
-				+ "...\n"
-				+ "/./");
+		StringReader sr = new StringReader("9 3 4\n"
+				+ "5\n"
+				+ "3 0 3 0 3\n"
+				+ "1 2 1 4 0\n"
+				+ "3 4 1 0 2\n"
+				+ "1 0 5 0 0\n"
+				+ ".\\./.\n"
+				+ "..../\n"
+				+ "\\....\n"
+				+ ".\\/.\\\n"
+				+ "./../");
 //		Scanner in = new Scanner(System.in);
 		Scanner in = new Scanner(sr);
 		Map<Creature, Integer> counts = new HashMap<>();
@@ -69,7 +71,7 @@ public class Solution {
 				}
 			}
 		}
-		
+
 		Solution manor = new Solution(size, canSee, manorTemplate, counts);
 		manor.find(0);
 	}
@@ -167,17 +169,23 @@ public class Solution {
 					Direction dir = e.getKey();
 					List<Integer> counts = e.getValue();
 					return IntStream.range(0, counts.size())
-							.mapToObj(i -> compileEquation(i, dir, counts.get(i)));
+					.mapToObj(i -> compileEquation(i, dir, counts.get(i)));
 				})
 				.filter(e -> e.elements.size() > 0)
 				.sorted((e1, e2) -> Integer.compare(e1.elements.size(), e2.elements.size()))
 				.collect(Collectors.toList());
 	}
 
-	private boolean check() {
-		return this.equations.stream()
-				.map(e -> checkEquation(e))
-				.allMatch(b -> b);
+	private Bool check() {
+		Bool allTrue = Bool.True;
+		for (Equation e : this.equations) {
+			Bool res = checkEquation(e);
+			if (res == Bool.NotDecidedYet) {
+				return res;
+			}
+			allTrue = allTrue.and(res);
+		}
+		return allTrue;
 	}
 
 	private void print() {
@@ -189,24 +197,30 @@ public class Solution {
 		}
 	}
 
-	private Boolean checkEquation(Equation e) {
+	private Bool checkEquation(Equation e) {
+		if (e.elements.stream().anyMatch(el -> manor[el.row][el.col] == '.')) {
+			return Bool.NotDecidedYet;
+		}
+
 		int sum = e.elements.stream()
 				.mapToInt(el -> {
-					if (el.isVisible(Creature.fromChar(manor[el.row][el.col])))
+					if (el.isVisible(Creature.fromChar(manor[el.row][el.col]))) {
 						return 1;
-					else
+					} else {
 						return 0;
+					}
 				}).sum();
-		return sum == e.result;
+		return Bool.fromBoolean(sum == e.result);
 	}
 
 	private class Equation {
+
 		Direction dir;
 
 		public Equation(Direction dir) {
 			this.dir = dir;
 		}
-		
+
 		int result;
 		List<EquationElement> elements = new ArrayList<>();
 
@@ -218,7 +232,7 @@ public class Solution {
 		public String toString() {
 			return "Equation{" + "dir=" + dir + ", result=" + result + '}';
 		}
-		
+
 	}
 
 	private class EquationElement {
@@ -243,11 +257,12 @@ public class Solution {
 	}
 
 	boolean find(int level) {
-        if (level == emptyPlaces.size()) {
-			if (check()) {
+        if (level > 3 || level == emptyPlaces.size()) {
+			final Bool res = check();
+			if (res == Bool.True) {
 				print();
 				return true;
-			} else {
+			} else if (res == Bool.False) {
 				return false;
 			}
 		}
@@ -275,9 +290,10 @@ public class Solution {
 		Ghost(false, true);
 
 		private static Creature fromChar(char first) {
-			for (Creature c: Creature.values()) {
-				if (c.name().charAt(0) == first)
+			for (Creature c : Creature.values()) {
+				if (c.name().charAt(0) == first) {
 					return c;
+				}
 			}
 			throw new IllegalArgumentException();
 		}
@@ -347,4 +363,22 @@ public class Solution {
 			throw new IllegalArgumentException();
 		}
 	};
+
+	enum Bool {
+
+		True,
+		False,
+		NotDecidedYet;
+
+		static Bool fromBoolean(boolean b) {
+			return b ? True : False;
+		}
+
+		private Bool and(Bool val) {
+			if (this == True && val == True) {
+				return True;
+			}
+			return False;
+		}
+	}
 }
