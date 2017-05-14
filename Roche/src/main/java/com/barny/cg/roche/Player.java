@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Scanner;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
+import java.util.stream.Stream;
 
 /**
  * Bring data on patient samples from the diagnosis machine to the laboratory
@@ -55,15 +57,17 @@ class Player {
 					goTo("DIAGNOSIS");
 				}
 			} else {
-				List<Character> missingMolecules = me.missingMolecules(mySamples);
-				System.err.println("Missing: " + listToString(missingMolecules));
-				if (missingMolecules.isEmpty()) {
-					goTo("DIAGNOSIS");
+				final Optional<Sample> completeSample = mySamples.stream().filter(s -> me.missingMolecules(s).isEmpty()).findAny();
+				if (completeSample.isPresent()) {
+					if (me.target.equals("LABORATORY"))
+						connect(completeSample.get().sampleId);
+					else
+						goTo("LABORATORY");
 				} else {
 					if (!me.target.equals("MOLECULES")) {
 						goTo("MOLECULES");
 					} else {
-						connect(missingMolecules.get(0));
+						connect(me.missingMolecules(mySamples).get(0));
 					}
 				}
 			}
@@ -85,21 +89,18 @@ class Player {
 
 	List<Character> missingMolecules(List<Sample> samples) {
 		return samples.stream()
-				.flatMap(s -> missingMolecules(s).keySet().stream())
+				.flatMap(s -> missingMolecules(s).stream())
 				.collect(toList());
 	}
 
-	Map<Character, Integer> missingMolecules(Sample sample) {
+	List<Character> missingMolecules(Sample sample) {
 		return sample.cost.entrySet().stream()
 				.filter(e -> !storage.containsKey(e.getKey()) || e.getValue() > storage.get(e.getKey()))
-				.collect(() -> new HashMap<Character, Integer>(), 
-						(m, e) ->  {
-							if (storage.containsKey(e.getKey()))
-								m.put(e.getKey(), e.getValue() - storage.get(e.getKey()));
-							else
-								m.put(e.getKey(), e.getValue());
-						}, 
-						(m1, m2) -> { m1.putAll(m2); });
+				.flatMap(e -> {
+					long take = storage.containsKey(e.getKey()) ? (e.getValue() - storage.get(e.getKey())) : e.getValue();
+					return Stream.generate(() -> e.getKey()).limit(take);
+				})
+				.collect(toList());
 	}
 
 	static class Sample {
