@@ -17,7 +17,7 @@ import java.util.stream.Stream;
  */
 class Player {
 
-	String target;
+	Module target;
 	int eta;
 	int score;
 	Map<Character, Integer> storage = new HashMap<>();
@@ -38,7 +38,6 @@ class Player {
 			readPlayer(in, me);
 			System.err.println(me);
 			readPlayer(in, him);
-
 			availableMolecules(in);
 
 			int sampleCount = in.nextInt();
@@ -48,29 +47,24 @@ class Player {
 					.filter(s -> s.carriedBy == 0)
 					.collect(toList());
 
-			System.err.println(listToString(mySamples));
+			System.err.println(listToString(samples));
 
-			if (mySamples.isEmpty()) {
-				if (me.target.equals("DIAGNOSIS") && !samples.isEmpty()) {
-					connect(samples.get(0).sampleId);
-				} else {
-					goTo("DIAGNOSIS");
-				}
-			} else {
-				final Optional<Sample> completeSample = mySamples.stream().filter(s -> me.missingMolecules(s).isEmpty()).findAny();
-				if (completeSample.isPresent()) {
-					if (me.target.equals("LABORATORY"))
-						connect(completeSample.get().sampleId);
-					else
-						goTo("LABORATORY");
-				} else {
-					if (!me.target.equals("MOLECULES")) {
-						goTo("MOLECULES");
-					} else {
-						connect(me.missingMolecules(mySamples).get(0));
+			if (me.target == Module.SAMPLES) {
+				if (mySamples.size() < 3) {
+					Optional<Integer> sample = samples.stream().filter(s -> s.carriedBy == -1).findFirst().map(s -> s.sampleId);
+					if (sample.isPresent()) {
+						System.err.println("Get sample " + sample.get());
+						connect(sample.get());
+						continue;
 					}
 				}
 			}
+			
+			if (mySamples.isEmpty() && me.target != Module.SAMPLES) {
+				Module.SAMPLES.go();
+				continue;
+			}
+			System.out.println("WAIT");
 		}
 	}
 
@@ -115,6 +109,7 @@ class Player {
 		int totalCost() {
 			return cost.values().stream().mapToInt(i -> i).sum();
 		}
+
 		static Sample read(Scanner in) {
 			Sample sample = new Sample();
 			sample.sampleId = in.nextInt();
@@ -166,7 +161,7 @@ class Player {
 	}
 
 	private static void readPlayer(Scanner in, Player p) {
-		p.target = in.next();
+		p.target = Module.valueOf(in.next());
 		p.eta = in.nextInt();
 		p.score = in.nextInt();
 		p.storage.put('A', in.nextInt());
@@ -184,4 +179,17 @@ class Player {
 	private static void connect(Object c) {
 		System.out.println("CONNECT " + c);
 	}
+
+	enum Module {
+
+		MOLECULES,
+		LABORATORY,
+		DIAGNOSIS,
+		SAMPLES;
+
+		void go() {
+			System.out.println("GOTO " + this.name());
+		}
+	}
+
 }

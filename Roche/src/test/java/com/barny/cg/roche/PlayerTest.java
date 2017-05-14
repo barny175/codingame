@@ -8,10 +8,10 @@ package com.barny.cg.roche;
 import com.barny.cg.roche.Player.Sample;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import org.junit.After;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -84,8 +84,9 @@ public class PlayerTest {
 		player.storage.put('A', 1);
 		player.storage.put('B', 2);
 		
-		Map<Character, Integer> result = player.missingMolecules(sample);
-		assertEquals(1, (int) result.get('A'));
-		assertEquals(1, (int) result.get('C'));
+		List<Character> result = player.missingMolecules(sample);
+		assertEquals(2, result.size());
+		assertTrue(result.contains('A'));
+		assertTrue(result.contains('C'));
 	}
 }
