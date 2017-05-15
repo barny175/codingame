@@ -7,7 +7,11 @@ package com.barny.cg.roche;
 
 import com.barny.cg.roche.Player.Sample;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import static java.util.stream.Collectors.toList;
+import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
@@ -71,6 +75,23 @@ public class PlayerTest {
 		assertEquals(0, result.stream().filter(c -> c == 'E').count());
 	}
 
+	@Test
+	public void testAvailableMolecules() {
+		List<Character> molecules = Stream.of('A', 'A', 'C', 'E', 'E', 'E', 'E').collect(toList());
+		
+		Map<Character, Integer> available = new HashMap<>();
+		available.put('A', 1);
+		available.put('C', 1);
+		available.put('B', 4);
+		available.put('E', 2);
+		List<Character> result = Player.availableMolecules(molecules, available);
+		assertEquals(1, result.stream().filter(c -> c == 'A').count());
+		assertEquals(0, result.stream().filter(c -> c == 'B').count());
+		assertEquals(1, result.stream().filter(c -> c == 'C').count());
+		assertEquals(2, result.stream().filter(c -> c == 'E').count());
+		
+	}
+	
 	/**
 	 * Test of missingMolecules method, of class Player.
 	 */
