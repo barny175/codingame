@@ -42,21 +42,19 @@ class Player {
 
 			int sampleCount = in.nextInt();
 			List<Sample> samples = readSamples(sampleCount, in);
-
+//            System.err.println(listToString(samples));
+            
 			List<Sample> mySamples = samples.stream()
 					.filter(s -> s.carriedBy == 0)
 					.collect(toList());
-
-			System.err.println(listToString(samples));
+            System.err.println(listToString(mySamples));
 
 			if (me.target == Module.SAMPLES) {
 				if (mySamples.size() < 3) {
-					Optional<Integer> sample = samples.stream().filter(s -> s.carriedBy == -1).findFirst().map(s -> s.sampleId);
-					if (sample.isPresent()) {
-						System.err.println("Get sample " + sample.get());
-						connect(sample.get());
-						continue;
-					}
+				    int rank = 1;
+					System.err.println("Get sample ranked " + rank);
+					connect(rank);
+					continue;
 				}
 			}
 			
@@ -64,10 +62,52 @@ class Player {
 				Module.SAMPLES.go();
 				continue;
 			}
+			
+			List<Sample> undiagnosed = getUndiagnosedSamples(mySamples);
+			if (!undiagnosed.isEmpty()) {
+				if (me.target == Module.DIAGNOSIS) {
+					connect(undiagnosed.get(0).sampleId);
+				} else {
+					Module.DIAGNOSIS.go();
+				}
+				continue;
+			}
+			
+			List<Character> missingMolecules = me.missingMolecules(mySamples);
+			if (missingMolecules.isEmpty() || me.molecules() >= 10) {
+				if (me.target != Module.LABORATORY) {
+					Module.LABORATORY.go();
+					continue;
+				}
+			} else {
+				List<Character> molecules = (missingMolecules.size() > 10) ? me.missingMolecules(mySamples.get(0)) : missingMolecules;
+				if (me.target == Module.MOLECULES) {
+					connect(molecules.get(0));
+				} else {
+					Module.MOLECULES.go();
+				}
+				continue;
+			}
+			
+			if (me.target == Module.LABORATORY) {
+				Optional<Sample> completedSample = me.getCompletedSample(mySamples);
+				if (completedSample.isPresent()) {
+					connect(completedSample.get().sampleId);
+					continue;
+				}
+			}
 			System.out.println("WAIT");
 		}
 	}
-
+	
+	private Optional<Sample> getCompletedSample(List<Sample> samples) {
+		return samples.stream().filter(s -> this.missingMolecules(s).isEmpty()).findAny();
+	}
+	
+	private static List<Sample> getUndiagnosedSamples(List<Sample> samples) {
+		return samples.stream().filter(s -> !s.isDiagnosed()).collect(toList());
+	}
+	
 	private static List<Sample> readSamples(int sampleCount, Scanner in) {
 		List<Sample> samples = new ArrayList<>();
 		for (int i = 0; i < sampleCount; i++) {
@@ -77,24 +117,34 @@ class Player {
 		return samples;
 	}
 
-	private static void goTo(String target) {
-		System.out.println("GOTO " + target);
-	}
-
 	List<Character> missingMolecules(List<Sample> samples) {
-		return samples.stream()
-				.flatMap(s -> missingMolecules(s).stream())
-				.collect(toList());
+		final HashMap<Character, Integer> totalCost = samples.stream().map(s -> s.cost).collect(HashMap::new, (m, cost) -> {
+			cost.forEach((c, i) -> {
+				m.merge(c, i, Integer::sum);
+			});
+		}, (m1, m2) -> m1.putAll(m2));
+		return missingMolecules(totalCost);
 	}
 
 	List<Character> missingMolecules(Sample sample) {
-		return sample.cost.entrySet().stream()
+		return missingMolecules(sample.cost);
+	}
+	
+	List<Character> missingMolecules(Map<Character, Integer> cost) {
+		return cost.entrySet().stream()
 				.filter(e -> !storage.containsKey(e.getKey()) || e.getValue() > storage.get(e.getKey()))
 				.flatMap(e -> {
 					long take = storage.containsKey(e.getKey()) ? (e.getValue() - storage.get(e.getKey())) : e.getValue();
 					return Stream.generate(() -> e.getKey()).limit(take);
 				})
 				.collect(toList());
+	}
+
+	private int molecules() {
+		return storage.entrySet().stream()
+				.map(e -> e.getValue())
+				.mapToInt(i -> i)
+				.sum();
 	}
 
 	static class Sample {
@@ -110,6 +160,10 @@ class Player {
 			return cost.values().stream().mapToInt(i -> i).sum();
 		}
 
+		boolean isDiagnosed() {
+			return !cost.values().contains(-1);
+		}
+		
 		static Sample read(Scanner in) {
 			Sample sample = new Sample();
 			sample.sampleId = in.nextInt();
@@ -181,7 +235,7 @@ class Player {
 	}
 
 	enum Module {
-
+		START_POS,
 		MOLECULES,
 		LABORATORY,
 		DIAGNOSIS,
@@ -191,5 +245,4 @@ class Player {
 			System.out.println("GOTO " + this.name());
 		}
 	}
-
 }
