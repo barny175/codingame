@@ -1,5 +1,4 @@
 package com.barny.cg.roche;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -59,13 +58,16 @@ class Player {
 			}
 			
 			if (mySamples.isEmpty() && me.target != Module.SAMPLES) {
+				System.err.println("No samples.");
 				Module.SAMPLES.go();
 				continue;
 			}
 			
 			List<Sample> undiagnosed = getUndiagnosedSamples(mySamples);
 			if (!undiagnosed.isEmpty()) {
+				System.err.println("Some samples are not diagnosed yet.");
 				if (me.target == Module.DIAGNOSIS) {
+					System.err.println("Diagnosed sample " + undiagnosed.get(0).sampleId);
 					connect(undiagnosed.get(0).sampleId);
 				} else {
 					Module.DIAGNOSIS.go();
@@ -74,27 +76,36 @@ class Player {
 			}
 			
 			List<Character> missingMolecules = me.missingMolecules(mySamples);
+			System.err.println("Missing: " + listToString(missingMolecules, ", "));
 			if (missingMolecules.isEmpty() || me.molecules() >= 10) {
 				if (me.target != Module.LABORATORY) {
 					Module.LABORATORY.go();
 					continue;
 				}
 			} else {
-				List<Character> molecules = (missingMolecules.size() > 10) ? me.missingMolecules(mySamples.get(0)) : missingMolecules;
-				if (me.target == Module.MOLECULES) {
-					connect(molecules.get(0));
-				} else {
-					Module.MOLECULES.go();
+				Optional<Sample> notCompleteSample = mySamples.stream().filter(s -> !me.missingMolecules(s).isEmpty()).findFirst();
+				if (notCompleteSample.isPresent()) {
+					List<Character> molecules = me.missingMolecules(notCompleteSample.get());
+					if (me.target == Module.MOLECULES) {
+						System.err.println("Missing molecules for sample " + notCompleteSample.get().toString() + ": " + listToString(molecules, ", "));
+						connect(molecules.get(0));
+					} else {
+						Module.MOLECULES.go();
+					}
+					continue;
 				}
-				continue;
 			}
 			
 			if (me.target == Module.LABORATORY) {
 				Optional<Sample> completedSample = me.getCompletedSample(mySamples);
 				if (completedSample.isPresent()) {
+				    System.err.println("Molecules ready for sample: " + completedSample.get());
 					connect(completedSample.get().sampleId);
 					continue;
 				}
+			} else {
+				Module.LABORATORY.go();
+				continue;
 			}
 			System.out.println("WAIT");
 		}
@@ -191,8 +202,12 @@ class Player {
 		return "Player{" + "target=" + target + ", eta=" + eta + ", score=" + score + ", A=" + storage.get('A') + ", B=" + storage.get('B') + ", C=" + storage.get('C') + ", D=" + storage.get('D') + ", E=" + storage.get('E') + ", expertiseA=" + expertiseA + ", expertiseB=" + expertiseB + ", expertiseC=" + expertiseC + ", expertiseD=" + expertiseD + ", expertiseE=" + expertiseE + '}';
 	}
 
+	static String listToString(List<?> l, String delim) {
+		return l.stream().map(o -> o.toString()).collect(joining(delim));
+	}
+	
 	static String listToString(List<?> l) {
-		return l.stream().map(o -> o.toString()).collect(joining("\n"));
+		return listToString(l, "\n");
 	}
 
 	private static void availableMolecules(Scanner in) {
