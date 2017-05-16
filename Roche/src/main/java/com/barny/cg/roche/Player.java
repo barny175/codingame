@@ -83,15 +83,10 @@ class Player {
 				return new Go(Module.LABORATORY);
 			}
 		} else {
-			Optional<Sample> notCompleteSample = mySamples.stream().filter(s -> !me.missingMolecules(s).isEmpty()).findFirst();
-			if (notCompleteSample.isPresent()) {
-				List<Character> molecules = me.missingMolecules(notCompleteSample.get());
+			Optional<Character> molToGet = me.moleculeToGet(mySamples, availableMolecules);
+			if (molToGet.isPresent()) {
 				if (me.target == Module.MOLECULES) {
-					System.err.println("Missing molecules for sample " + notCompleteSample.get().toString() + ": " + listToString(molecules, ", "));
-					System.err.println("Available: " + mapToString(availableMolecules, ", "));
-					final List<Character> availMols = availableMolecules(molecules, availableMolecules);
-					System.err.println("Intersection: " + listToString(availMols, ", "));
-					return new GetMolecule(availMols.get(0));
+					return new GetMolecule(molToGet.get());
 				} else {
 					return new Go(Module.MOLECULES);
 				}
@@ -109,12 +104,23 @@ class Player {
 		return WAIT;
 	}
 
-	static List<Character> availableMolecules(List<Character> needed, Map<Character, Integer> available) {
+	Optional<Character> moleculeToGet(List<Sample> samples, Map<Character, Integer> availableMolecules) {
+		return samples.stream()
+				.flatMap(s -> {
+					List<Character> mm = missingMolecules(s);
+					if (mm.isEmpty())
+						return Stream.empty();
+					final List<Character> availMols = moleculesToGet(mm, availableMolecules);
+					return availMols.stream();
+				})
+				.findFirst();
+	}
+	static List<Character> moleculesToGet(List<Character> needed, Map<Character, Integer> available) {
 		Map<Character, Long> neededMap = needed.stream().collect(Collectors.groupingBy(c -> c, Collectors.counting()));
 		return neededMap.entrySet().stream()
 				.flatMap(e -> {
 					if (available.containsKey(e.getKey()))
-						return Stream.generate(() -> e.getKey()).limit(available.get(e.getKey()));
+						return Stream.generate(() -> e.getKey()).limit(Long.min(e.getValue(), available.get(e.getKey())));
 					else
 						return Stream.empty();
 				})
@@ -156,7 +162,7 @@ class Player {
 				.filter(e -> !storage.containsKey(e.getKey()) || e.getValue() > storage.get(e.getKey()))
 				.flatMap(e -> {
 					long take = e.getValue() - storage.getOrDefault(e.getKey(), 0) - expertise.getOrDefault(e.getKey(), 0);
-					return Stream.generate(() -> e.getKey()).limit(take);
+					return Stream.generate(() -> e.getKey()).limit(take > 0 ? take : 0);
 				})
 				.collect(toList());
 	}
