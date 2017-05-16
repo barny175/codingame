@@ -54,17 +54,10 @@ class Player {
 				.filter(s -> s.carriedBy == 0)
 				.collect(toList());
 		System.err.println(listToString(mySamples));
-		if (me.target == Module.SAMPLES) {
-			if (mySamples.size() < 3) {
-				int rank = getRank(me.getExpertise());
-				System.err.println("Get sample ranked " + rank);
-				return new Connect(rank);
-			}
-		}
-		if (mySamples.isEmpty() && me.target != Module.SAMPLES) {
-			System.err.println("No samples.");
-			return new Go(Module.SAMPLES);
-		}
+		Optional<Command> command = me.sampleAcquisition(mySamples);
+		 if (command.isPresent())
+			 return command.get();
+		 
 		List<Sample> undiagnosed = getUndiagnosedSamples(mySamples);
 		if (!undiagnosed.isEmpty()) {
 			System.err.println("Some samples are not diagnosed yet.");
@@ -90,6 +83,9 @@ class Player {
 				} else {
 					return new Go(Module.MOLECULES);
 				}
+			} else {
+				System.err.println("Cannot obtain any molecules.");
+				return new Go(Module.SAMPLES);
 			}
 		}
 		if (me.target == Module.LABORATORY) {
@@ -102,6 +98,22 @@ class Player {
 			return new Go(Module.LABORATORY);
 		}
 		return WAIT;
+	}
+
+	private Optional<Command> sampleAcquisition(List<Sample> mySamples) {
+		if (this.target == Module.SAMPLES) {
+			if (mySamples.size() < 3) {
+				int rank = getRank(this.getExpertise());
+				System.err.println("Get sample ranked " + rank);
+				return Optional.of(new Connect(rank));
+			}
+		}
+		
+		if (mySamples.isEmpty() && this.target != Module.SAMPLES) {
+			System.err.println("No samples.");
+			return Optional.of(new Go(Module.SAMPLES));
+		}
+		return Optional.empty();
 	}
 
 	Optional<Character> moleculeToGet(List<Sample> samples, Map<Character, Integer> availableMolecules) {
