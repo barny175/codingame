@@ -155,7 +155,7 @@ class Player {
 		return cost.entrySet().stream()
 				.filter(e -> !storage.containsKey(e.getKey()) || e.getValue() > storage.get(e.getKey()))
 				.flatMap(e -> {
-					long take = storage.containsKey(e.getKey()) ? (e.getValue() - storage.get(e.getKey())) : e.getValue();
+					long take = e.getValue() - storage.getOrDefault(e.getKey(), 0) - expertise.getOrDefault(e.getKey(), 0);
 					return Stream.generate(() -> e.getKey()).limit(take);
 				})
 				.collect(toList());
@@ -272,10 +272,6 @@ class Player {
 		LABORATORY,
 		DIAGNOSIS,
 		SAMPLES;
-
-		void go() {
-			System.out.println("GOTO " + this.name());
-		}
 	}
 
 	private static abstract class Command {

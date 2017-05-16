@@ -68,11 +68,11 @@ public class PlayerTest {
 		player.storage.put('B', 2);
 		
 		List<Character> result = player.missingMolecules(samples);
-		assertEquals(2, result.stream().filter(c -> c == 'A').count());
-		assertEquals(0, result.stream().filter(c -> c == 'B').count());
-		assertEquals(1, result.stream().filter(c -> c == 'C').count());
-		assertEquals(2, result.stream().filter(c -> c == 'D').count());
-		assertEquals(0, result.stream().filter(c -> c == 'E').count());
+		assertEquals(2, countMolecules(result, 'A'));
+		assertEquals(0, countMolecules(result, 'B'));
+		assertEquals(1, countMolecules(result, 'C'));
+		assertEquals(2, countMolecules(result, 'D'));
+		assertEquals(0, countMolecules(result, 'E'));
 	}
 
 	@Test
@@ -85,11 +85,14 @@ public class PlayerTest {
 		available.put('B', 4);
 		available.put('E', 2);
 		List<Character> result = Player.availableMolecules(molecules, available);
-		assertEquals(1, result.stream().filter(c -> c == 'A').count());
-		assertEquals(0, result.stream().filter(c -> c == 'B').count());
-		assertEquals(1, result.stream().filter(c -> c == 'C').count());
-		assertEquals(2, result.stream().filter(c -> c == 'E').count());
-		
+		assertEquals(1, countMolecules(result, 'A'));
+		assertEquals(0, countMolecules(result, 'B'));
+		assertEquals(1, countMolecules(result, 'C'));
+		assertEquals(2, countMolecules(result, 'E'));
+	}
+
+	private static long countMolecules(List<Character> result, Character molecule) {
+		return result.stream().filter(c -> c == molecule).count();
 	}
 	
 	/**
@@ -109,5 +112,25 @@ public class PlayerTest {
 		assertEquals(2, result.size());
 		assertTrue(result.contains('A'));
 		assertTrue(result.contains('C'));
+	}
+	
+	@Test
+	public void testExpertise() {
+		Sample sample = new Sample();
+		sample.cost.put('A', 2);
+		sample.cost.put('B', 4);
+		sample.cost.put('C', 1);
+		
+		Player player = new Player();
+		player.storage.put('A', 1);
+		player.storage.put('B', 2);
+		player.expertise.put('C', 1);
+		player.expertise.put('D', 2);
+		
+		List<Character> missingMolecules = player.missingMolecules(sample);
+		assertEquals(1, countMolecules(missingMolecules, 'A'));
+		assertEquals(2, countMolecules(missingMolecules, 'B'));
+		assertEquals(0, countMolecules(missingMolecules, 'C'));
+		assertEquals(0, countMolecules(missingMolecules, 'D'));
 	}
 }
