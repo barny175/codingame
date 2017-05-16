@@ -6,13 +6,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Scanner;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import java.util.stream.Stream;
 
 class Player {
-
+	private static final int MAX_SAMPLES = 3;
+	
 	private static int getRank(int expertise) {
 		if (expertise < 5) {
 			return 1;
@@ -54,28 +56,29 @@ class Player {
 				.filter(s -> s.carriedBy == 0)
 				.collect(toList());
 		System.err.println(listToString(mySamples));
-		Optional<Command> command = me.sampleAcquisition(mySamples);
-		 if (command.isPresent())
-			 return command.get();
-		 
-		List<Sample> undiagnosed = getUndiagnosedSamples(mySamples);
-		if (!undiagnosed.isEmpty()) {
-			System.err.println("Some samples are not diagnosed yet.");
-			if (me.target == Module.DIAGNOSIS) {
-				System.err.println("Diagnosed sample " + undiagnosed.get(0).sampleId);
-				return new Connect(undiagnosed.get(0).sampleId);
-			} else {
-				return new Go(Module.DIAGNOSIS);
-			}
-		}
+		Optional<Command> getSampleCmd = me.sampleAcquisition(mySamples, availableMolecules);
+		 if (getSampleCmd.isPresent())
+			 return getSampleCmd.get();
+		
+		Optional<Command> diagnoseCmd = me.diagnose(mySamples, availableMolecules);
+		if (diagnoseCmd.isPresent())
+			 return diagnoseCmd.get();
+
 		List<Character> missingMolecules = me.missingMolecules(mySamples);
 		System.err.println("Missing: " + listToString(missingMolecules, ", "));
-		if (missingMolecules.isEmpty() || me.molecules() >= 10) {
-			System.err.println("My molecules: " + me.molecules());
-			if (me.target != Module.LABORATORY) {
-				return new Go(Module.LABORATORY);
+		if (missingMolecules.isEmpty()){ 
+			if (me.molecules() >= 10) {
+				System.err.println("My molecules: " + me.molecules());
+				if (me.target != Module.LABORATORY) {
+					return new Go(Module.LABORATORY);
+				}
+			} else {
+				List<Character> mm = availableMolecules.entrySet().stream().filter(e -> e.getValue() > 0).map(e -> e.getKey()).collect(toList());
+				if (!mm.isEmpty() && me.target == Module.MOLECULES)
+					return new GetMolecule(mm.get(0));
 			}
-		} else {
+		} 
+		if (!missingMolecules.isEmpty() && me.molecules() < 10) {
 			Optional<Character> molToGet = me.moleculeToGet(mySamples, availableMolecules);
 			if (molToGet.isPresent()) {
 				if (me.target == Module.MOLECULES) {
@@ -85,7 +88,18 @@ class Player {
 				}
 			} else {
 				System.err.println("Cannot obtain any molecules.");
-				return new Go(Module.SAMPLES);
+				if (me.target == Module.DIAGNOSIS) {
+					List<Sample> sorted = mySamples.stream().sorted((s1, s2) -> {
+						final List<Character> mm1 = me.missingMolecules(s1);
+						final List<Character> mm2 = me.missingMolecules(s2);
+						return (-1) * Integer.compare(mm1.size(), mm2.size());
+					}).collect(toList());
+					if (!sorted.isEmpty()) {
+						return new Connect(sorted.get(0).sampleId);
+					}
+				} else {
+					return new Go(Module.DIAGNOSIS);
+				}
 			}
 		}
 		if (me.target == Module.LABORATORY) {
@@ -99,10 +113,25 @@ class Player {
 		}
 		return WAIT;
 	}
-
-	private Optional<Command> sampleAcquisition(List<Sample> mySamples) {
+	
+	Optional<Command> diagnose(List<Sample> mySamples, Map<Character, Integer> availableMolecules) {
+		List<Sample> undiagnosed = getUndiagnosedSamples(mySamples);
+		if (!undiagnosed.isEmpty()) {
+			System.err.println("Some samples are not diagnosed yet.");
+			if (this.target == Module.DIAGNOSIS) {
+				System.err.println("Diagnosed sample " + undiagnosed.get(0).sampleId);
+				return Optional.of(new Connect(undiagnosed.get(0).sampleId));
+			} else {
+				return Optional.of(new Go(Module.DIAGNOSIS));
+			}
+		}
+		
+		return Optional.empty();
+	}
+	
+	Optional<Command> sampleAcquisition(List<Sample> mySamples, Map<Character, Integer> availableMolecules) {
 		if (this.target == Module.SAMPLES) {
-			if (mySamples.size() < 3) {
+			if (mySamples.size() < MAX_SAMPLES) {
 				int rank = getRank(this.getExpertise());
 				System.err.println("Get sample ranked " + rank);
 				return Optional.of(new Connect(rank));
@@ -144,7 +173,11 @@ class Player {
 	}
 
 	private static List<Sample> getUndiagnosedSamples(List<Sample> samples) {
-		return samples.stream().filter(s -> !s.isDiagnosed()).collect(toList());
+		return filterSamples(samples, s -> !s.isDiagnosed());
+	}
+	
+	private static List<Sample> filterSamples(List<Sample> samples, Predicate<Sample> p) {
+		return samples.stream().filter(s -> p.test(s)).collect(toList());
 	}
 
 	private static List<Sample> readSamples(int sampleCount, Scanner in) {
