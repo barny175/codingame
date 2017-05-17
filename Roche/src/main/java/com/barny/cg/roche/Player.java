@@ -48,57 +48,57 @@ class Player {
 			int sampleCount = in.nextInt();
 			List<Sample> samples = readSamples(sampleCount, in);
 //            System.err.println(listToString(samples));
-			Command cmd = getCommand(samples, me, availableMolecules);
+			Command cmd = me.getCommand(samples, availableMolecules);
 			cmd.act();
 		}
 	}
 
-	private static Command getCommand(List<Sample> samples, Player me, Map<Character, Integer> availableMolecules) {
+	Command getCommand(List<Sample> samples, Map<Character, Integer> availableMolecules) {
 		List<Sample> mySamples = samples.stream()
 				.filter(s -> s.carriedBy == 0)
 				.collect(toList());
 		System.err.println(listToString(mySamples));
-		Optional<Command> getSampleCmd = me.sampleAcquisition(mySamples, availableMolecules);
+		Optional<Command> getSampleCmd = this.sampleAcquisition(mySamples, availableMolecules);
 		 if (getSampleCmd.isPresent())
 			 return getSampleCmd.get();
 		
-		Optional<Command> diagnoseCmd = me.diagnose(mySamples, availableMolecules);
+		Optional<Command> diagnoseCmd = this.diagnose(mySamples, availableMolecules);
 		if (diagnoseCmd.isPresent())
 			 return diagnoseCmd.get();
 
-		List<Character> missingMolecules = me.missingMolecules(mySamples);
+		List<Character> missingMolecules = this.missingMolecules(mySamples);
 		System.err.println("Missing: " + listToString(missingMolecules, ", "));
 		if (missingMolecules.isEmpty()){ 
-			if (me.molecules() >= 10) {
-				System.err.println("My molecules: " + me.molecules());
-				if (me.target != Module.LABORATORY) {
+			if (this.molecules() >= 10) {
+				System.err.println("My molecules: " + this.molecules());
+				if (this.target != Module.LABORATORY) {
 					return new Go(Module.LABORATORY);
 				}
 			} else if (GREEDY) {
 				List<Character> mm = availableMolecules.entrySet().stream()
 						.filter(e -> e.getValue() > 0)
 						.map(e -> e.getKey())
-						.sorted((m1, m2) -> Integer.compare(me.getMolecules(m1), me.getMolecules(m2)))
+						.sorted((m1, m2) -> Integer.compare(this.getMolecules(m1), this.getMolecules(m2)))
 						.collect(toList());
 				System.err.println("Get as much mollecules as possible. Best to get: " + listToString(mm, ", "));
-				if (!mm.isEmpty() && me.target == Module.MOLECULES)
+				if (!mm.isEmpty() && this.target == Module.MOLECULES)
 					return new GetMolecule(mm.get(0));
 			}
 		} 
-		if (!missingMolecules.isEmpty() && me.molecules() < 10) {
-			Optional<Character> molToGet = me.moleculeToGet(mySamples, availableMolecules);
+		if (!missingMolecules.isEmpty() && this.molecules() < 10) {
+			Optional<Character> molToGet = this.moleculeToGet(mySamples, availableMolecules);
 			if (molToGet.isPresent()) {
-				if (me.target == Module.MOLECULES) {
+				if (this.target == Module.MOLECULES) {
 					return new GetMolecule(molToGet.get());
 				} else {
 					return new Go(Module.MOLECULES);
 				}
 			} else {
 				System.err.println("Cannot obtain any molecules.");
-				if (me.target == Module.DIAGNOSIS) {
+				if (this.target == Module.DIAGNOSIS) {
 					List<Sample> sorted = mySamples.stream().sorted((s1, s2) -> {
-						final List<Character> mm1 = me.missingMolecules(s1);
-						final List<Character> mm2 = me.missingMolecules(s2);
+						final List<Character> mm1 = this.missingMolecules(s1);
+						final List<Character> mm2 = this.missingMolecules(s2);
 						return (-1) * Integer.compare(mm1.size(), mm2.size());
 					}).collect(toList());
 					if (!sorted.isEmpty()) {
@@ -109,8 +109,8 @@ class Player {
 				}
 			}
 		}
-		if (me.target == Module.LABORATORY) {
-			Optional<Sample> completedSample = me.getCompletedSample(mySamples);
+		if (this.target == Module.LABORATORY) {
+			Optional<Sample> completedSample = this.getCompletedSample(mySamples);
 			if (completedSample.isPresent()) {
 				System.err.println("Molecules ready for sample: " + completedSample.get());
 				return new Connect(completedSample.get().sampleId);
@@ -334,7 +334,7 @@ class Player {
 		SAMPLES;
 	}
 
-	private static abstract class Command {
+	static abstract class Command {
 
 		void act() {
 			System.out.println(command());
@@ -343,7 +343,7 @@ class Player {
 		protected abstract String command();
 	}
 
-	private static class Go extends Command {
+	static class Go extends Command {
 
 		Module module;
 
@@ -357,7 +357,7 @@ class Player {
 		}
 	}
 
-	private static class Connect extends Command {
+	static class Connect extends Command {
 
 		String where;
 
@@ -375,7 +375,7 @@ class Player {
 		}
 	}
 	
-	static class GetMolecule extends Command {
+	class GetMolecule extends Command {
 		char molecule;
 
 		public GetMolecule(char molecule) {
@@ -389,7 +389,7 @@ class Player {
 		
 	}
 
-	private static Command WAIT = new Command() {
+	static Command WAIT = new Command() {
 
 		@Override
 		protected String command() {
@@ -401,5 +401,5 @@ class Player {
 		return availableMolecules.entrySet().stream()
 				.map(e -> e.getKey() + "=" + e.getValue())
 				.collect(joining(delim));
-	}
+	}	
 }

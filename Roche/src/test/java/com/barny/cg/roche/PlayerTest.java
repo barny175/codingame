@@ -5,6 +5,8 @@
  */
 package com.barny.cg.roche;
 
+import com.barny.cg.roche.Player.Go;
+import com.barny.cg.roche.Player.Module;
 import com.barny.cg.roche.Player.Sample;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,15 +24,8 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-/**
- *
- * @author martin
- */
 public class PlayerTest {
-	
-	public PlayerTest() {
-	}
-	
+
 	@BeforeClass
 	public static void setUpClass() {
 	}
@@ -114,10 +109,7 @@ public class PlayerTest {
 	
 	@Test
 	public void testAvailableMolecules2() {
-		List<Character> molecules = new ArrayList<>();
-		molecules.add('B');
-		molecules.add('B');
-		molecules.add('C');
+		List<Character> molecules = listOf('B', 'B', 'C');
 		
 		Map<Character, Integer> availableMolecules = availableMolecules(5, 3, 6, 6, 6);
 		
@@ -201,5 +193,26 @@ public class PlayerTest {
 		available.put('D', d);
 		available.put('E', e);
 		return available;
+	}
+	
+	@Test
+	public void without_samples_command_is_to_go_to_get_some() {
+		Player p = new Player();
+		p.target = Player.Module.START_POS;
+		Player.Command command = p.getCommand(listOf(), availableMolecules(1, 1, 1, 1, 1));
+		assertTrue(command instanceof Go);
+		assertEquals(Module.SAMPLES, ((Go)command).module);
+		
+		p.target = Module.SAMPLES;
+		Player.Command command2 = p.getCommand(listOf(), availableMolecules(1, 1, 1, 1, 1));
+		assertTrue(command2 instanceof Player.Connect);
+	}
+	
+	static <T> List<T> listOf(T... ts) {
+		List<T> l = new ArrayList<>();
+		for (T t : ts) {
+			l.add(t);
+		}
+		return l;
 	}
 }
