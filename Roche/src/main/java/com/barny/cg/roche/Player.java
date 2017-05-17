@@ -14,6 +14,7 @@ import java.util.stream.Stream;
 
 class Player {
 	private static final int MAX_SAMPLES = 3;
+	private static final boolean GREEDY = false;
 	
 	private static int getRank(int expertise) {
 		if (expertise < 5) {
@@ -42,6 +43,7 @@ class Player {
 			System.err.println(me);
 			readPlayer(in, him);
 			Map<Character, Integer> availableMolecules = Player.availableMolecules(in);
+			System.err.println("Available molecules: " + mapToString(availableMolecules, ", "));
 
 			int sampleCount = in.nextInt();
 			List<Sample> samples = readSamples(sampleCount, in);
@@ -72,8 +74,13 @@ class Player {
 				if (me.target != Module.LABORATORY) {
 					return new Go(Module.LABORATORY);
 				}
-			} else {
-				List<Character> mm = availableMolecules.entrySet().stream().filter(e -> e.getValue() > 0).map(e -> e.getKey()).collect(toList());
+			} else if (GREEDY) {
+				List<Character> mm = availableMolecules.entrySet().stream()
+						.filter(e -> e.getValue() > 0)
+						.map(e -> e.getKey())
+						.sorted((m1, m2) -> Integer.compare(me.getMolecules(m1), me.getMolecules(m2)))
+						.collect(toList());
+				System.err.println("Get as much mollecules as possible. Best to get: " + listToString(mm, ", "));
 				if (!mm.isEmpty() && me.target == Module.MOLECULES)
 					return new GetMolecule(mm.get(0));
 			}
@@ -133,13 +140,13 @@ class Player {
 		if (this.target == Module.SAMPLES) {
 			if (mySamples.size() < MAX_SAMPLES) {
 				int rank = getRank(this.getExpertise());
-				System.err.println("Get sample ranked " + rank);
+				System.err.println("I can take more samples. Get sample ranked " + rank);
 				return Optional.of(new Connect(rank));
 			}
 		}
 		
 		if (mySamples.isEmpty() && this.target != Module.SAMPLES) {
-			System.err.println("No samples.");
+			System.err.println("No samples. Go to samples module.");
 			return Optional.of(new Go(Module.SAMPLES));
 		}
 		return Optional.empty();
@@ -147,13 +154,11 @@ class Player {
 
 	Optional<Character> moleculeToGet(List<Sample> samples, Map<Character, Integer> availableMolecules) {
 		return samples.stream()
-				.flatMap(s -> {
-					List<Character> mm = missingMolecules(s);
-					if (mm.isEmpty())
-						return Stream.empty();
-					final List<Character> availMols = moleculesToGet(mm, availableMolecules);
-					return availMols.stream();
-				})
+				.map(s -> missingMolecules(s))
+				.filter(l -> !l.isEmpty())
+				.map(mm -> moleculesToGet(mm, availableMolecules))
+				.sorted((mols1, mols2) -> Integer.compare(mols1.size(), mols2.size()))
+				.flatMap(mols -> mols.stream())
 				.findFirst();
 	}
 	static List<Character> moleculesToGet(List<Character> needed, Map<Character, Integer> available) {
@@ -310,6 +315,10 @@ class Player {
 
 	int getExpertise() {
 		return expertise.values().stream().mapToInt(i -> i).sum();
+	}
+	
+	int getMolecules(Character c) {
+		return this.storage.getOrDefault(c, 0) + this.expertise.getOrDefault(c, 0);
 	}
 
 	private static void connect(Object c) {

@@ -10,11 +10,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import static java.util.stream.Collectors.toList;
 import java.util.stream.Stream;
 import org.junit.After;
 import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -79,11 +81,7 @@ public class PlayerTest {
 	public void testMoleculesToGet() {
 		List<Character> molecules = Stream.of('A', 'A', 'C', 'E', 'E', 'E', 'E').collect(toList());
 		
-		Map<Character, Integer> available = new HashMap<>();
-		available.put('A', 1);
-		available.put('C', 1);
-		available.put('B', 4);
-		available.put('E', 2);
+		Map<Character, Integer> available = availableMolecules(1, 4, 1, 0, 2);
 		List<Character> result = Player.moleculesToGet(molecules, available);
 		assertEquals(1, countMolecules(result, 'A'));
 		assertEquals(0, countMolecules(result, 'B'));
@@ -121,12 +119,7 @@ public class PlayerTest {
 		molecules.add('B');
 		molecules.add('C');
 		
-		Map<Character, Integer> availableMolecules = new HashMap<>();
-		availableMolecules.put('A' ,5);
-		availableMolecules.put('B' ,3);
-		availableMolecules.put('C' ,6);
-		availableMolecules.put('D' ,6);
-		availableMolecules.put('E' ,6);
+		Map<Character, Integer> availableMolecules = availableMolecules(5, 3, 6, 6, 6);
 		
 		final List<Character> availMols = Player.moleculesToGet(molecules, availableMolecules);
 		assertEquals(0, countMolecules(availMols, 'A'));
@@ -155,5 +148,58 @@ public class PlayerTest {
 		assertEquals(0, countMolecules(missingMolecules, 'C'));
 		assertEquals(0, countMolecules(missingMolecules, 'D'));
 		assertEquals(0, countMolecules(missingMolecules, 'E'));
+	}
+	
+	@Test
+	public void testMoleculeToGet() {
+		Player player = new Player();
+		player.storage.put('A', 0);
+		player.storage.put('B', 0);
+		player.storage.put('C', 0);
+		player.storage.put('D', 0);
+		player.storage.put('E', 0);
+		
+		Sample sample = new Sample();
+		sample.cost.put('A', 2);
+		sample.cost.put('B', 2);
+		sample.cost.put('C', 1);
+		sample.cost.put('E', 1);
+		
+		Sample sample2 = new Sample();
+		sample2.cost.put('A', 2);
+		sample2.cost.put('B', 4);
+		sample2.cost.put('C', 1);
+		sample2.cost.put('E', 1);
+		
+		List<Sample> samples = new ArrayList<>();
+		samples.add(sample);
+		samples.add(sample2);
+		
+		Map<Character, Integer> availableMolecules = availableMolecules(2, 2, 1, 0, 1);
+		
+		List<Character> mols = new ArrayList<>();
+		for (int i = 0; i < 6; i++) {
+			Optional<Character> moleculeToGet = player.moleculeToGet(samples, availableMolecules);
+			assertTrue(moleculeToGet.isPresent());
+			player.storage.merge(moleculeToGet.get(), 1, (old, val) -> old + 1);
+			mols.add(moleculeToGet.get());
+			availableMolecules.merge(moleculeToGet.get(), 0, (old, val) -> old - 1);
+		}
+		assertEquals(2, countMolecules(mols, 'A'));
+		assertEquals(2, countMolecules(mols, 'B'));
+		assertEquals(1, countMolecules(mols, 'C'));
+		assertEquals(0, countMolecules(mols, 'D'));
+		assertEquals(1, countMolecules(mols, 'E'));
+		assertFalse(player.moleculeToGet(samples, availableMolecules).isPresent());
+	}
+
+	private Map<Character, Integer> availableMolecules(int a, int b, int c, int d, int e) {
+		Map<Character, Integer> available = new HashMap<>();
+		available.put('A', a);
+		available.put('C', c);
+		available.put('B', b);
+		available.put('D', d);
+		available.put('E', e);
+		return available;
 	}
 }
