@@ -5,8 +5,11 @@
  */
 package com.barny.cg.roche;
 
+import com.barny.cg.roche.Player.Command;
 import com.barny.cg.roche.Player.Go;
 import com.barny.cg.roche.Player.Module;
+import com.barny.cg.roche.Player.PutSample;
+import com.barny.cg.roche.Player.PutSampleToCloud;
 import com.barny.cg.roche.Player.Sample;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -76,7 +79,7 @@ public class PlayerTest {
 	public void testMoleculesToGet() {
 		List<Character> molecules = Stream.of('A', 'A', 'C', 'E', 'E', 'E', 'E').collect(toList());
 		
-		Map<Character, Integer> available = availableMolecules(1, 4, 1, 0, 2);
+		Map<Character, Integer> available = moleculeMap(1, 4, 1, 0, 2);
 		List<Character> result = Player.moleculesToGet(molecules, available);
 		assertEquals(1, countMolecules(result, 'A'));
 		assertEquals(0, countMolecules(result, 'B'));
@@ -111,7 +114,7 @@ public class PlayerTest {
 	public void testAvailableMolecules2() {
 		List<Character> molecules = listOf('B', 'B', 'C');
 		
-		Map<Character, Integer> availableMolecules = availableMolecules(5, 3, 6, 6, 6);
+		Map<Character, Integer> availableMolecules = moleculeMap(5, 3, 6, 6, 6);
 		
 		final List<Character> availMols = Player.moleculesToGet(molecules, availableMolecules);
 		assertEquals(0, countMolecules(availMols, 'A'));
@@ -167,7 +170,7 @@ public class PlayerTest {
 		samples.add(sample);
 		samples.add(sample2);
 		
-		Map<Character, Integer> availableMolecules = availableMolecules(2, 2, 1, 0, 1);
+		Map<Character, Integer> availableMolecules = moleculeMap(2, 2, 1, 0, 1);
 		
 		List<Character> mols = new ArrayList<>();
 		for (int i = 0; i < 6; i++) {
@@ -185,7 +188,7 @@ public class PlayerTest {
 		assertFalse(player.moleculeToGet(samples, availableMolecules).isPresent());
 	}
 
-	private Map<Character, Integer> availableMolecules(int a, int b, int c, int d, int e) {
+	private Map<Character, Integer> moleculeMap(int a, int b, int c, int d, int e) {
 		Map<Character, Integer> available = new HashMap<>();
 		available.put('A', a);
 		available.put('C', c);
@@ -199,13 +202,84 @@ public class PlayerTest {
 	public void without_samples_command_is_to_go_to_get_some() {
 		Player p = new Player();
 		p.target = Player.Module.START_POS;
-		Player.Command command = p.getCommand(listOf(), availableMolecules(1, 1, 1, 1, 1));
+		Player.Command command = p.getCommand(listOf(), moleculeMap(1, 1, 1, 1, 1));
 		assertTrue(command instanceof Go);
 		assertEquals(Module.SAMPLES, ((Go)command).module);
 		
 		p.target = Module.SAMPLES;
-		Player.Command command2 = p.getCommand(listOf(), availableMolecules(1, 1, 1, 1, 1));
-		assertTrue(command2 instanceof Player.Connect);
+		Player.Command command2 = p.getCommand(listOf(), moleculeMap(1, 1, 1, 1, 1));
+		assertTrue(command2 instanceof Player.GetSample);
+	}
+	
+	@Test
+	public void produce_medicine_whenever_possible() {
+		Player p = new Player();
+		p.target = Module.MOLECULES;
+		p.storage = moleculeMap(2, 1, 0, 2, 2);
+		
+		Map<Character, Integer> availableMolecules = moleculeMap(3, 0, 3, 3, 2);
+		final Sample sample1 = new SampleBuilder()
+				.id(2)
+				.cost('A', 2)
+				.cost('B', 0)
+				.cost('C', 0)
+				.cost('D', 2)
+				.cost('E', 0)
+				.build();
+		final Sample sample2 = new SampleBuilder()
+				.id(4)
+				.cost('A', 1)
+				.cost('B', 1)
+				.cost('C', 0)
+				.cost('D', 1)
+				.cost('E', 1)
+				.build();		
+		final Sample sample3 = new SampleBuilder()
+				.id(6)
+				.cost('A', 1)
+				.cost('B', 1)
+				.cost('C', 0)
+				.cost('D', 1)
+				.cost('E', 2)
+				.build();	
+		
+		Command cmd = p.getCommand(listOf(sample1, sample2, sample3), availableMolecules);
+		assertTrue(cmd instanceof Go);
+		assertEquals(Module.LABORATORY, ((Go)cmd).module);
+		p.target = Module.LABORATORY;
+		Command cmd2 = p.getCommand(listOf(sample1, sample2, sample3), availableMolecules);
+		assertTrue(cmd2 instanceof PutSample);
+		final String sampleId = ((PutSample)cmd2).connStr;
+		assertTrue(sampleId.equals("2") || sampleId.equals("4") || sampleId.equals("6"));
+	}
+	
+	@Test
+	public void return_some_samples_to_cloud_if_molecules_not_available() {
+		Player p = new Player();
+		p.target = Module.DIAGNOSIS;
+		
+		final Sample sample1 = new SampleBuilder()
+				.id(1)
+				.cost('A', 1)
+				.cost('B', 2)
+				.cost('E', 1)
+				.build();
+		final Sample sample2 = new SampleBuilder()
+				.id(2)
+				.cost('A', 3)
+				.build();
+		final Sample sample3 = new SampleBuilder()
+				.id(3)
+				.cost('A', 1)
+				.cost('B', 1)
+				.cost('C', 1)
+				.cost('D', 1)
+				.cost('E', 1)
+				.build();		
+		
+		Player.Command command = p.getCommand(listOf(sample1, sample2), moleculeMap(1, 1, 1, 1, 0));
+		assertTrue(command instanceof PutSampleToCloud);
+		assertEquals(sample3.sampleId, ((PutSampleToCloud)command).id);
 	}
 	
 	static <T> List<T> listOf(T... ts) {
@@ -214,5 +288,26 @@ public class PlayerTest {
 			l.add(t);
 		}
 		return l;
+	}
+	
+	static class SampleBuilder {
+		private Map<Character, Integer> costMap = new HashMap<>();
+		private int id;
+		public SampleBuilder id(int id) {
+			this.id = id;
+			return this;
+		}
+		
+		public SampleBuilder cost(Character mol, int required) {
+			costMap.put(mol, required);
+			return this;
+		}
+		
+		public Sample build() {
+			Sample sample = new Sample();
+			sample.sampleId = this.id;
+			sample.cost.putAll(costMap);
+			return sample;
+		}
 	}
 }

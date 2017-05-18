@@ -8,18 +8,18 @@ import java.util.Optional;
 import java.util.Scanner;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import java.util.stream.Stream;
+import static java.util.stream.Collectors.joining;
 
 class Player {
 	private static final int MAX_SAMPLES = 3;
 	private static final boolean GREEDY = false;
 	
 	private static int getRank(int expertise) {
-		if (expertise < 5) {
+		if (expertise < 2) {
 			return 1;
-		} else if (expertise < 10) {
+		} else if (expertise < 4) {
 			return 2;
 		}
 		return 3;
@@ -58,6 +58,7 @@ class Player {
 				.filter(s -> s.carriedBy == 0)
 				.collect(toList());
 		System.err.println(listToString(mySamples));
+				
 		Optional<Command> getSampleCmd = this.sampleAcquisition(mySamples, availableMolecules);
 		 if (getSampleCmd.isPresent())
 			 return getSampleCmd.get();
@@ -65,6 +66,11 @@ class Player {
 		Optional<Command> diagnoseCmd = this.diagnose(mySamples, availableMolecules);
 		if (diagnoseCmd.isPresent())
 			 return diagnoseCmd.get();
+
+		Optional<Command> produce = this.produceMedicine(mySamples);
+		if (!mySamples.isEmpty() && produce.isPresent()) {
+			return produce.get();
+		}
 
 		List<Character> missingMolecules = this.missingMolecules(mySamples);
 		System.err.println("Missing: " + listToString(missingMolecules, ", "));
@@ -102,23 +108,27 @@ class Player {
 						return (-1) * Integer.compare(mm1.size(), mm2.size());
 					}).collect(toList());
 					if (!sorted.isEmpty()) {
-						return new Connect(sorted.get(0).sampleId);
+						return new GetSample(sorted.get(0).sampleId);
 					}
 				} else {
 					return new Go(Module.DIAGNOSIS);
 				}
 			}
 		}
-		if (this.target == Module.LABORATORY) {
-			Optional<Sample> completedSample = this.getCompletedSample(mySamples);
-			if (completedSample.isPresent()) {
+		return this.produceMedicine(mySamples).orElse(WAIT);
+	}
+	
+	Optional<Command> produceMedicine(List<Sample> mySamples) {
+		Optional<Sample> completedSample = this.getCompletedSample(mySamples);
+		if (completedSample.isPresent()) {
+			if (this.target == Module.LABORATORY){
 				System.err.println("Molecules ready for sample: " + completedSample.get());
-				return new Connect(completedSample.get().sampleId);
+				return Optional.of(new PutSample(completedSample.get()));
+			} else {
+				return Optional.of(new Go(Module.LABORATORY));
 			}
-		} else {
-			return new Go(Module.LABORATORY);
 		}
-		return WAIT;
+		return Optional.empty();
 	}
 	
 	Optional<Command> diagnose(List<Sample> mySamples, Map<Character, Integer> availableMolecules) {
@@ -127,7 +137,7 @@ class Player {
 			System.err.println("Some samples are not diagnosed yet.");
 			if (this.target == Module.DIAGNOSIS) {
 				System.err.println("Diagnosed sample " + undiagnosed.get(0).sampleId);
-				return Optional.of(new Connect(undiagnosed.get(0).sampleId));
+				return Optional.of(new GetSample(undiagnosed.get(0).sampleId));
 			} else {
 				return Optional.of(new Go(Module.DIAGNOSIS));
 			}
@@ -141,7 +151,7 @@ class Player {
 			if (mySamples.size() < MAX_SAMPLES) {
 				int rank = getRank(this.getExpertise());
 				System.err.println("I can take more samples. Get sample ranked " + rank);
-				return Optional.of(new Connect(rank));
+				return Optional.of(new GetSample(rank));
 			}
 		}
 		
@@ -209,9 +219,9 @@ class Player {
 
 	List<Character> missingMolecules(Map<Character, Integer> cost) {
 		return cost.entrySet().stream()
-				.filter(e -> !storage.containsKey(e.getKey()) || e.getValue() > storage.get(e.getKey()))
+				.filter(e -> !storage.containsKey(e.getKey()) || e.getValue() > this.getMolecules(e.getKey()))
 				.flatMap(e -> {
-					long take = e.getValue() - storage.getOrDefault(e.getKey(), 0) - expertise.getOrDefault(e.getKey(), 0);
+					long take = e.getValue() - this.getMolecules(e.getKey());
 					return Stream.generate(() -> e.getKey()).limit(take > 0 ? take : 0);
 				})
 				.collect(toList());
@@ -265,7 +275,7 @@ class Player {
 
 	@Override
 	public String toString() {
-		return "Player{" + "target=" + target + ", eta=" + eta + ", score=" + score + ", A=" + storage.get('A') + ", B=" + storage.get('B') + ", C=" + storage.get('C') + ", D=" + storage.get('D') + ", E=" + storage.get('E') + ", expA=" + expertise.get('A') + ", expB=" + expertise.get('B') + ", expC=" + expertise.get('C') + ", expD=" + expertise.get('D') + ", expE=" + expertise.get('E') + '}';
+		return "Player{" + "target=" + target + ", eta=" + eta + ", score=" + score + ", A=" + this.getMolecules('A') + ", B=" + this.getMolecules('B') + ", C=" + this.getMolecules('C') + ", D=" + this.getMolecules('D') + ", E=" + this.getMolecules('E') + ", mollecules=" + this.molecules() + '}';
 	}
 
 	static String listToString(List<?> l, String delim) {
@@ -356,25 +366,48 @@ class Player {
 			return "GOTO " + this.module.name();
 		}
 	}
+	
+	static class ConnectCommand extends Command {
+		String connStr;
 
-	static class Connect extends Command {
-
-		String where;
-
-		public Connect(String where) {
-			this.where = where;
+		public ConnectCommand(String connStr) {
+			this.connStr = connStr;
 		}
-
-		private Connect(int rank) {
-			this.where = Integer.toString(rank);
-		}
-
+		
 		@Override
 		protected String command() {
-			return "CONNECT " + where;
+			return "CONNECT " + connStr;
+		}
+	}
+
+	static class GetSample extends ConnectCommand {
+		private GetSample(int rank) {
+			super(Integer.toString(rank));
 		}
 	}
 	
+	
+	static class PutSample extends ConnectCommand {
+		Sample sample;
+
+		public PutSample(Sample sample) {
+			super(Integer.toString(sample.sampleId));
+		}
+	}
+	
+	static class PutSampleToCloud extends Command {
+		int id;
+
+		public PutSampleToCloud(int id) {
+			this.id = id;
+		}
+		
+		@Override
+		protected String command() {
+			return "CONNECT" + id;
+		}
+		
+	}
 	class GetMolecule extends Command {
 		char molecule;
 
