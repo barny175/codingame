@@ -8,18 +8,18 @@ import java.util.Optional;
 import java.util.Scanner;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import java.util.stream.Stream;
-import static java.util.stream.Collectors.joining;
 
 class Player {
 	private static final int MAX_SAMPLES = 3;
 	private static final boolean GREEDY = false;
 	
-	private static int getRank(int expertise) {
-		if (expertise < 2) {
+	private int getRank(int expertise) {
+		if (expertise < 4) {
 			return 1;
-		} else if (expertise < 4) {
+		} else if (expertise < 6) {
 			return 2;
 		}
 		return 3;
@@ -91,9 +91,9 @@ class Player {
 					return new GetMolecule(mm.get(0));
 			}
 		} 
-		if (!missingMolecules.isEmpty() && this.molecules() < 10) {
+		if (!missingMolecules.isEmpty()) {
 			Optional<Character> molToGet = this.moleculeToGet(mySamples, availableMolecules);
-			if (molToGet.isPresent()) {
+			if (this.molecules() < 10 && molToGet.isPresent()) {
 				if (this.target == Module.MOLECULES) {
 					return new GetMolecule(molToGet.get());
 				} else {
@@ -108,7 +108,7 @@ class Player {
 						return (-1) * Integer.compare(mm1.size(), mm2.size());
 					}).collect(toList());
 					if (!sorted.isEmpty()) {
-						return new GetSample(sorted.get(0).sampleId);
+						return new PutSample(sorted.get(0));
 					}
 				} else {
 					return new Go(Module.DIAGNOSIS);
@@ -331,12 +331,7 @@ class Player {
 		return this.storage.getOrDefault(c, 0) + this.expertise.getOrDefault(c, 0);
 	}
 
-	private static void connect(Object c) {
-		System.out.println("CONNECT " + c);
-	}
-
 	enum Module {
-
 		START_POS,
 		MOLECULES,
 		LABORATORY,
@@ -423,7 +418,6 @@ class Player {
 	}
 
 	static Command WAIT = new Command() {
-
 		@Override
 		protected String command() {
 			return "WAIT";
