@@ -68,54 +68,55 @@ class Player {
 			 return diagnoseCmd.get();
 
 		Optional<Command> produce = this.produceMedicine(mySamples);
-		if (!mySamples.isEmpty() && produce.isPresent()) {
+		if (!mySamples.isEmpty() && this.target == Module.LABORATORY && produce.isPresent()) {
 			return produce.get();
 		}
 
+		Optional<Command> getMolecules = this.getMissingMolecules(mySamples, availableMolecules);
+		return getMolecules.orElseGet(() -> 
+				this.produceMedicine(mySamples)
+						.orElse(WAIT)
+		);
+	}
+	
+	Optional<Command> getMissingMolecules(List<Sample> mySamples, Map<Character, Integer> availableMolecules) {
+		if (this.molecules() >= 10)
+			return Optional.empty();
+		
 		List<Character> missingMolecules = this.missingMolecules(mySamples);
 		System.err.println("Missing: " + listToString(missingMolecules, ", "));
 		if (missingMolecules.isEmpty()){ 
-			if (this.molecules() >= 10) {
-				System.err.println("My molecules: " + this.molecules());
-				if (this.target != Module.LABORATORY) {
-					return new Go(Module.LABORATORY);
-				}
-			} else if (GREEDY) {
+			if (GREEDY) {
 				List<Character> mm = availableMolecules.entrySet().stream()
 						.filter(e -> e.getValue() > 0)
 						.map(e -> e.getKey())
 						.sorted((m1, m2) -> Integer.compare(this.getMolecules(m1), this.getMolecules(m2)))
 						.collect(toList());
 				System.err.println("Get as much mollecules as possible. Best to get: " + listToString(mm, ", "));
-				if (!mm.isEmpty() && this.target == Module.MOLECULES)
-					return new GetMolecule(mm.get(0));
+				if (!mm.isEmpty() && this.target == Module.MOLECULES) {
+					return Optional.of(new GetMolecule(mm.get(0)));
+				}
 			}
 		} 
+		
 		if (!missingMolecules.isEmpty()) {
 			Optional<Character> molToGet = this.moleculeToGet(mySamples, availableMolecules);
 			if (this.molecules() < 10 && molToGet.isPresent()) {
-				if (this.target == Module.MOLECULES) {
-					return new GetMolecule(molToGet.get());
-				} else {
-					return new Go(Module.MOLECULES);
-				}
+				return Optional.of(new GetMolecule(molToGet.get()));
 			} else {
 				System.err.println("Cannot obtain any molecules.");
-				if (this.target == Module.DIAGNOSIS) {
-					List<Sample> sorted = mySamples.stream().sorted((s1, s2) -> {
-						final List<Character> mm1 = this.missingMolecules(s1);
-						final List<Character> mm2 = this.missingMolecules(s2);
-						return (-1) * Integer.compare(mm1.size(), mm2.size());
-					}).collect(toList());
-					if (!sorted.isEmpty()) {
-						return new PutSample(sorted.get(0));
-					}
-				} else {
-					return new Go(Module.DIAGNOSIS);
+				List<Sample> sorted = mySamples.stream().sorted((s1, s2) -> {
+					final List<Character> mm1 = this.missingMolecules(s1);
+					final List<Character> mm2 = this.missingMolecules(s2);
+					return (-1) * Integer.compare(mm1.size(), mm2.size());
+				}).collect(toList());
+				if (!sorted.isEmpty()) {
+					return Optional.of(new PutSampleToCloud(sorted.get(0)));
 				}
 			}
 		}
-		return this.produceMedicine(mySamples).orElse(WAIT);
+
+		return Optional.empty();
 	}
 	
 	Optional<Command> produceMedicine(List<Sample> mySamples) {
@@ -135,42 +136,41 @@ class Player {
 		List<Sample> undiagnosed = getUndiagnosedSamples(mySamples);
 		if (!undiagnosed.isEmpty()) {
 			System.err.println("Some samples are not diagnosed yet.");
-			if (this.target == Module.DIAGNOSIS) {
-				System.err.println("Diagnosed sample " + undiagnosed.get(0).sampleId);
-				return Optional.of(new GetSample(undiagnosed.get(0).sampleId));
-			} else {
-				return Optional.of(new Go(Module.DIAGNOSIS));
-			}
+			System.err.println("Diagnosed sample " + undiagnosed.get(0).sampleId);
+			return Optional.of(new DiagnoseSample(undiagnosed.get(0).sampleId));
 		}
 		
 		return Optional.empty();
 	}
 	
 	Optional<Command> sampleAcquisition(List<Sample> mySamples, Map<Character, Integer> availableMolecules) {
-		if (this.target == Module.SAMPLES) {
-			if (mySamples.size() < MAX_SAMPLES) {
-				int rank = getRank(this.getExpertise());
-				System.err.println("I can take more samples. Get sample ranked " + rank);
-				return Optional.of(new GetSample(rank));
-			}
+		if (mySamples.size() < MAX_SAMPLES) {
+			int rank = getRank(this.getExpertise());
+			System.err.println("Get sample ranked " + rank);
+			return Optional.of(new GetSample(rank));
 		}
-		
-		if (mySamples.isEmpty() && this.target != Module.SAMPLES) {
-			System.err.println("No samples. Go to samples module.");
-			return Optional.of(new Go(Module.SAMPLES));
-		}
+
 		return Optional.empty();
 	}
 
 	Optional<Character> moleculeToGet(List<Sample> samples, Map<Character, Integer> availableMolecules) {
-		return samples.stream()
+		final Optional<Character> molToGet = samples.stream()
 				.map(s -> missingMolecules(s))
 				.filter(l -> !l.isEmpty())
 				.map(mm -> moleculesToGet(mm, availableMolecules))
 				.sorted((mols1, mols2) -> Integer.compare(mols1.size(), mols2.size()))
 				.flatMap(mols -> mols.stream())
 				.findFirst();
+		if (molToGet.isPresent())
+			return molToGet;
+		
+		final List<Character> missing = moleculesToGet(
+				missingMolecules(mergeMaps(samples.stream().map(s -> s.cost).collect(toList()))),
+				availableMolecules);
+		return Optional.ofNullable(missing.isEmpty() ? null : missing.get(0));
 	}
+				
+				
 	static List<Character> moleculesToGet(List<Character> needed, Map<Character, Integer> available) {
 		Map<Character, Long> neededMap = needed.stream().collect(Collectors.groupingBy(c -> c, Collectors.counting()));
 		return neededMap.entrySet().stream()
@@ -339,16 +339,25 @@ class Player {
 		SAMPLES;
 	}
 
-	static abstract class Command {
-
+	abstract class Command {
+		
 		void act() {
-			System.out.println(command());
+			if (target != necessaryModule()) {
+				System.err.println("Go to module " + necessaryModule());
+				System.out.println(goTo());
+			} else {
+				System.out.println(command());
+			}
 		}
 
+		protected String goTo() {
+			return "GOTO " + necessaryModule();
+		}
 		protected abstract String command();
+		protected abstract Module necessaryModule();
 	}
 
-	static class Go extends Command {
+	class Go extends Command {
 
 		Module module;
 
@@ -360,67 +369,88 @@ class Player {
 		protected String command() {
 			return "GOTO " + this.module.name();
 		}
+
+		@Override
+		protected Module necessaryModule() {
+			return module;
+		}
 	}
 	
-	static class ConnectCommand extends Command {
+	abstract class ConnectCommand extends Command {
 		String connStr;
+		Module module;
 
-		public ConnectCommand(String connStr) {
+		public ConnectCommand(String connStr, Module m) {
 			this.connStr = connStr;
+			this.module = m;
+		}
+		
+		public ConnectCommand(int id, Module module) {
+			this.connStr = Integer.toString(id);
+			this.module = module;
+		}
+		
+		public ConnectCommand(char c, Module module) {
+			this.connStr = Character.toString(c);
+			this.module = module;
 		}
 		
 		@Override
 		protected String command() {
 			return "CONNECT " + connStr;
 		}
+		
+		@Override
+		protected Module necessaryModule() {
+			return module;
+		}
 	}
 
-	static class GetSample extends ConnectCommand {
+	class GetSample extends ConnectCommand {
 		private GetSample(int rank) {
-			super(Integer.toString(rank));
+			super(Integer.toString(rank), Module.SAMPLES);
 		}
 	}
 	
 	
-	static class PutSample extends ConnectCommand {
+	class PutSample extends ConnectCommand {
 		Sample sample;
 
 		public PutSample(Sample sample) {
-			super(Integer.toString(sample.sampleId));
+			super(Integer.toString(sample.sampleId), Module.LABORATORY);
 		}
 	}
 	
-	static class PutSampleToCloud extends Command {
+	class PutSampleToCloud extends ConnectCommand {
 		int id;
 
-		public PutSampleToCloud(int id) {
-			this.id = id;
-		}
-		
-		@Override
-		protected String command() {
-			return "CONNECT" + id;
-		}
-		
+		public PutSampleToCloud(Sample sample) {
+			super(sample.sampleId, Module.DIAGNOSIS);
+		}		
 	}
-	class GetMolecule extends Command {
-		char molecule;
-
+	
+	class GetMolecule extends ConnectCommand {
 		public GetMolecule(char molecule) {
-			this.molecule = molecule;
+			super(molecule, Module.MOLECULES);
 		}
-		
-		@Override
-		protected String command() {
-			return "CONNECT " + molecule;
-		}
-		
 	}
 
-	static Command WAIT = new Command() {
+	class DiagnoseSample extends ConnectCommand {
+
+		public DiagnoseSample(int sampleId) {
+			super(sampleId, Module.DIAGNOSIS);
+		}
+	}
+	
+	Command WAIT = new Command() {
 		@Override
 		protected String command() {
 			return "WAIT";
+		}
+
+		@Override
+		protected Module necessaryModule() {
+			return target;
 		}
 	};
 
@@ -429,4 +459,14 @@ class Player {
 				.map(e -> e.getKey() + "=" + e.getValue())
 				.collect(joining(delim));
 	}	
+	
+	Map<Character, Integer> mergeMaps(List<Map<Character, Integer>> maps) {
+		Map<Character, Integer> result = new HashMap<>();
+		for (Map<Character, Integer> map : maps) {
+			map.forEach((c, i) -> {
+				result.merge(c, i, (i1, i2) -> i1 + i2);
+			});
+		}
+		return result;
+	}
 }
