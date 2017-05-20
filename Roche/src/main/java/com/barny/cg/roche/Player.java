@@ -15,9 +15,10 @@ import java.util.stream.Stream;
 class Player {
 	private static final int MAX_SAMPLES = 3;
 	private static final boolean GREEDY = false;
+	private static final int RANK_ONE_THRESHOLD = 0;
 	
 	private int getRank(int expertise) {
-		if (expertise < 4) {
+		if (expertise < RANK_ONE_THRESHOLD) {
 			return 1;
 		} else if (expertise < 6) {
 			return 2;
@@ -75,7 +76,8 @@ class Player {
 		Optional<Command> getMolecules = this.getMissingMolecules(mySamples, availableMolecules);
 		return getMolecules.orElseGet(() -> 
 				this.produceMedicine(mySamples)
-						.orElse(WAIT)
+						.orElseGet(() -> this.putSampleToCloud(mySamples, availableMolecules)
+							.orElse(WAIT))
 		);
 	}
 	
@@ -103,31 +105,35 @@ class Player {
 			Optional<Character> molToGet = this.moleculeToGet(mySamples, availableMolecules);
 			if (this.molecules() < 10 && molToGet.isPresent()) {
 				return Optional.of(new GetMolecule(molToGet.get()));
-			} else {
-				System.err.println("Cannot obtain any molecules.");
-				List<Sample> sorted = mySamples.stream().sorted((s1, s2) -> {
-					final List<Character> mm1 = this.missingMolecules(s1);
-					final List<Character> mm2 = this.missingMolecules(s2);
-					return (-1) * Integer.compare(mm1.size(), mm2.size());
-				}).collect(toList());
-				if (!sorted.isEmpty()) {
-					return Optional.of(new PutSampleToCloud(sorted.get(0)));
-				}
-			}
+			} 
 		}
 
+		return Optional.empty();
+	}
+	
+	Optional<Command> putSampleToCloud(List<Sample> mySamples, Map<Character, Integer> availableMolecules) {
+		
+		List<Character> missingMolecules = this.missingMolecules(mySamples);
+		
+		if (!missingMolecules.isEmpty()) {
+			System.err.println("Cannot obtain any molecules.");
+			List<Sample> sorted = mySamples.stream().sorted((s1, s2) -> {
+				final List<Character> mm1 = this.missingMolecules(s1);
+				final List<Character> mm2 = this.missingMolecules(s2);
+				return (-1) * Integer.compare(mm1.size(), mm2.size());
+			}).collect(toList());
+			if (!sorted.isEmpty()) {
+				return Optional.of(new PutSampleToCloud(sorted.get(0)));
+			}
+		}
 		return Optional.empty();
 	}
 	
 	Optional<Command> produceMedicine(List<Sample> mySamples) {
 		Optional<Sample> completedSample = this.getCompletedSample(mySamples);
 		if (completedSample.isPresent()) {
-			if (this.target == Module.LABORATORY){
-				System.err.println("Molecules ready for sample: " + completedSample.get());
-				return Optional.of(new PutSample(completedSample.get()));
-			} else {
-				return Optional.of(new Go(Module.LABORATORY));
-			}
+			System.err.println("Molecules ready for sample: " + completedSample.get());
+			return Optional.of(new PutSample(completedSample.get()));
 		}
 		return Optional.empty();
 	}
@@ -356,25 +362,6 @@ class Player {
 		protected abstract String command();
 		protected abstract Module necessaryModule();
 	}
-
-	class Go extends Command {
-
-		Module module;
-
-		public Go(Module module) {
-			this.module = module;
-		}
-
-		@Override
-		protected String command() {
-			return "GOTO " + this.module.name();
-		}
-
-		@Override
-		protected Module necessaryModule() {
-			return module;
-		}
-	}
 	
 	abstract class ConnectCommand extends Command {
 		String connStr;
@@ -422,8 +409,6 @@ class Player {
 	}
 	
 	class PutSampleToCloud extends ConnectCommand {
-		int id;
-
 		public PutSampleToCloud(Sample sample) {
 			super(sample.sampleId, Module.DIAGNOSIS);
 		}		

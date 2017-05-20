@@ -18,36 +18,13 @@ import java.util.Map;
 import java.util.Optional;
 import static java.util.stream.Collectors.toList;
 import java.util.stream.Stream;
-import org.junit.After;
-import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class PlayerTest {
-
-	@BeforeClass
-	public static void setUpClass() {
-	}
 	
-	@AfterClass
-	public static void tearDownClass() {
-	}
-	
-	@Before
-	public void setUp() {
-	}
-	
-	@After
-	public void tearDown() {
-	}
-
-	/**
-	 * Test of missingMolecules method, of class Player.
-	 */
 	@Test
 	public void testMissingMolecules_List() {
 		List<Player.Sample> samples = new ArrayList<>();
@@ -284,10 +261,11 @@ public class PlayerTest {
 		assertTrue(sampleId.equals("2") || sampleId.equals("4") || sampleId.equals("6"));
 	}
 	
-//	@Test
+	@Test
 	public void return_some_samples_to_cloud_if_molecules_not_available() {
 		Player p = new Player();
 		p.target = Module.DIAGNOSIS;
+		p.storage = moleculeMap(1, 2, 0, 0, 0);
 		
 		final Sample sample1 = new SampleBuilder()
 				.id(1)
@@ -308,9 +286,9 @@ public class PlayerTest {
 				.cost('E', 1)
 				.build();		
 		
-		Player.Command command = p.getCommand(listOf(sample1, sample2), moleculeMap(1, 1, 1, 1, 0));
+		Player.Command command = p.getCommand(listOf(sample1, sample2, sample3), moleculeMap(0, 0, 0, 0, 0));
 		assertTrue(command instanceof PutSampleToCloud);
-		assertEquals(sample3.sampleId, ((PutSampleToCloud)command).id);
+		assertEquals(Integer.toString(sample3.sampleId), ((PutSampleToCloud)command).connStr);
 	}
 	
 	static <T> List<T> listOf(T... ts) {
