@@ -16,9 +16,8 @@ import java.util.stream.Stream;
 class Player {
 
 	private static final int MAX_SAMPLES = 3;
-	private static final boolean GREEDY = false;
-	private static final int RANK_TWO_THRESHOLD = 2;
-	private static final int RANK_THREE_THRESHOLD = 5;
+	private static final int RANK_TWO_THRESHOLD = 12;
+	private static final int RANK_THREE_THRESHOLD = 25;
 
 	private int getRank() {
 		if (this.getExpertise() > RANK_THREE_THRESHOLD) {
@@ -38,11 +37,13 @@ class Player {
 	MoleculeMap storage = new MoleculeMap();
 	MoleculeMap expertise = new MoleculeMap();
 	List<Sample> mySamples;
+	static List<MoleculeMap> projects = Collections.emptyList();
 
 	public static void main(String args[]) {
 		Scanner in = new Scanner(System.in);
-		readProjects(in);
+		projects = readProjects(in);
 
+		System.err.println("Projects: " + listToString(projects, "\n"));
 		Player me = new Player();
 		Player him = new Player();
 
@@ -74,12 +75,22 @@ class Player {
 			return produce.get();
 		}
 
+		Optional<Command> diagnoseCmd = this.diagnose(mySamples, availableMolecules);
+		final Optional<Command> putSampleToCloud = this.putSampleToCloud(mySamples, availableMolecules);
+		if (this.target == Module.DIAGNOSIS) {
+			if (diagnoseCmd.isPresent()) {
+				return diagnoseCmd.get();
+			}
+			if (putSampleToCloud.isPresent()) {
+				return putSampleToCloud.get();
+			}
+		}
+
 		Optional<Command> getSampleCmd = this.sampleAcquisition(mySamples, availableMolecules);
 		if (getSampleCmd.isPresent()) {
 			return getSampleCmd.get();
 		}
 
-		Optional<Command> diagnoseCmd = this.diagnose(mySamples, availableMolecules);
 		if (diagnoseCmd.isPresent()) {
 			return diagnoseCmd.get();
 		}
@@ -87,7 +98,7 @@ class Player {
 		Optional<Command> getMolecules = this.getMissingMolecules(mySamples, availableMolecules);
 		return getMolecules.orElseGet(()
 				-> this.produceMedicine(mySamples)
-				.orElseGet(() -> this.putSampleToCloud(mySamples, availableMolecules)
+				.orElseGet(() -> putSampleToCloud
 						.orElse(WAIT))
 		);
 	}
@@ -96,38 +107,17 @@ class Player {
 		if (this.molecules() >= 10) {
 			return Optional.empty();
 		}
-
-		List<Character> missingMolecules = this.missingMolecules(mySamples);
-		System.err.println("Missing: " + listToString(missingMolecules, ", "));
-		if (missingMolecules.isEmpty()) {
-			if (GREEDY) {
-				List<Character> mm = availableMolecules.entrySet().stream()
-						.filter(e -> e.getValue() > 0)
-						.map(e -> e.getKey())
-						.sorted((m1, m2) -> Integer.compare(this.getMolecules(m1), this.getMolecules(m2)))
-						.collect(toList());
-				System.err.println("Get as much mollecules as possible. Best to get: " + listToString(mm, ", "));
-				if (!mm.isEmpty() && this.target == Module.MOLECULES) {
-					return Optional.of(new GetMolecule(mm.get(0)));
-				}
-			}
-		}
-
-		if (!missingMolecules.isEmpty()) {
-			Optional<Character> molToGet = this.moleculeToGet(mySamples, availableMolecules);
-			if (this.molecules() < 10 && molToGet.isPresent()) {
-				return Optional.of(new GetMolecule(molToGet.get()));
-			}
+		Optional<Character> molToGet = this.moleculeToGet(mySamples, availableMolecules);
+		if (this.molecules() < 10 && molToGet.isPresent()) {
+			return Optional.of(new GetMolecule(molToGet.get()));
 		}
 
 		return Optional.empty();
 	}
 
 	Optional<Command> putSampleToCloud(List<Sample> mySamples, MoleculeMap availableMolecules) {
-
-		List<Character> missingMolecules = this.missingMolecules(mySamples);
-
-		if (!missingMolecules.isEmpty()) {
+		Optional<Character> molToGet = this.moleculeToGet(mySamples, availableMolecules);
+		if (!molToGet.isPresent() || this.molecules() >= 10) {
 			System.err.println("Cannot obtain any molecules.");
 			List<Sample> sorted = mySamples.stream().sorted((s1, s2) -> {
 				final List<Character> mm1 = this.missingMolecules(s1);
@@ -171,11 +161,55 @@ class Player {
 		return Optional.empty();
 	}
 
+	private class ExpertiseMolecules implements Molecules {
+
+		@Override
+		public int getMolecules(Character c) {
+			return expertise.getOrDefault(c, 0);
+		}
+	}
+
+	List<MoleculeMap> sortedProjects(MoleculeMap availableMolecules) {
+		ExpertiseMolecules expertiseMolecules = new ExpertiseMolecules();
+		return projects.stream()
+				.sorted((p1, p2) -> {
+					List<Character> m1 = moleculesToGet(missingMolecules(p1, expertiseMolecules), availableMolecules);
+					List<Character> m2 = moleculesToGet(missingMolecules(p2, expertiseMolecules), availableMolecules);
+					return Integer.compare(m1.size(), m2.size());
+				})
+				.collect(toList());
+	}
+
+	int projectIndex(List<MoleculeMap> sortedProjects, Sample sample) {
+		for (int i = 0; i < sortedProjects.size(); i++) {
+			if (sortedProjects.get(i).get(sample.gain) > 0)
+				return i;
+		}
+		return Integer.MAX_VALUE;
+	}
+	
 	Optional<Character> moleculeToGet(List<Sample> samples, MoleculeMap availableMolecules) {
-		List<Sample> incompleteSamples = incompleteSamples(samples);
+		List<MoleculeMap> sortedProjects = sortedProjects(availableMolecules);
+
+		List<Sample> incompleteSamples = incompleteSamples(samples).stream()
+				.sorted((s1, s2) -> {
+//					int pInd1 = projectIndex(sortedProjects, s1);
+//					int pInd2 = projectIndex(sortedProjects, s2);
+//					int cmp = Integer.compare(pInd1, pInd2);
+//					if (cmp != 0)
+//						return cmp;
+//					
+					List<Character> mols1 = moleculesToGet(missingMolecules(s1), availableMolecules);
+					List<Character> mols2 = moleculesToGet(missingMolecules(s2), availableMolecules);
+					return Integer.compare(mols1.size(), mols2.size());
+				})
+				.collect(toList());
+
+		System.err.println("Incomplete samples: " + listToString(incompleteSamples));
+		MoleculeMap availableForIncomplete = new MoleculeMap(availableMolecules);
+		completedSamples(samples).stream().map(s -> s.cost).forEach(m ->  availableForIncomplete.removeMolecules(m));
 		final Optional<Character> molToGet = incompleteSamples.stream()
-				.map(s -> moleculesToGet(missingMolecules(s), availableMolecules))
-				.sorted((mols1, mols2) -> Integer.compare(mols1.size(), mols2.size()))
+				.map(s -> moleculesToGet(missingMolecules(s), availableForIncomplete))
 				.flatMap(mols -> mols.stream())
 				.findFirst();
 		if (molToGet.isPresent()) {
@@ -186,7 +220,10 @@ class Player {
 		moleculeMap.mergeMaps(samples.stream().map(s -> s.cost).collect(toList()));
 		final List<Character> missing = moleculesToGet(
 				missingMolecules(moleculeMap, this::getMolecules),
-				availableMolecules);
+				availableForIncomplete);
+		if (!missing.isEmpty()) {
+			System.err.println("Missing: " + listToString(missing, ", ") + ". This should not happen!!!!");
+		}
 		return Optional.ofNullable(missing.isEmpty() ? null : missing.get(0));
 	}
 
@@ -195,7 +232,7 @@ class Player {
 		return neededMap.entrySet().stream()
 				.flatMap(e -> {
 					if (available.containsKey(e.getKey())) {
-						return Stream.generate(() -> e.getKey()).limit(Long.min(e.getValue(), available.get(e.getKey())));
+						return Stream.generate(() -> e.getKey()).limit(Long.min(e.getValue(), available.getOrDefault(e.getKey(), 0)));
 					} else {
 						return Stream.empty();
 					}
@@ -209,6 +246,7 @@ class Player {
 		incomplete.removeAll(completedSamples);
 		return incomplete;
 	}
+
 	private List<Sample> completedSamples(List<Sample> samples) {
 		MoleculeMap moleculeMap = new MoleculeMap();
 		moleculeMap.putAll(storage);
@@ -262,7 +300,6 @@ class Player {
 	}
 
 	public interface Molecules {
-
 		int getMolecules(Character c);
 	}
 
@@ -288,7 +325,7 @@ class Player {
 		int sampleId;
 		int carriedBy;
 		int rank;
-		String Gain;
+		Character gain;
 		int health;
 		MoleculeMap cost = new MoleculeMap();
 
@@ -305,7 +342,7 @@ class Player {
 			sample.sampleId = in.nextInt();
 			sample.carriedBy = in.nextInt();
 			sample.rank = in.nextInt();
-			sample.Gain = in.next();
+			sample.gain = in.next().charAt(0);
 			sample.health = in.nextInt();
 			sample.cost.put('A', in.nextInt());
 			sample.cost.put('B', in.nextInt());
@@ -317,14 +354,14 @@ class Player {
 
 		@Override
 		public String toString() {
-			return "Sample{" + "sampleId=" + sampleId + ", carriedBy=" + carriedBy + ", rank=" + rank + ", Gain=" + Gain + ", health=" + health + ", costA=" + cost.get('A') + ", costB=" + cost.get('B') + ", costC=" + cost.get('C') + ", costD=" + cost.get('D') + ", costE=" + cost.get('E') + '}';
+			return "Sample{" + "sampleId=" + sampleId + ", carriedBy=" + carriedBy + ", rank=" + rank + ", Gain=" + gain + ", health=" + health + ", costA=" + cost.get('A') + ", costB=" + cost.get('B') + ", costC=" + cost.get('C') + ", costD=" + cost.get('D') + ", costE=" + cost.get('E') + '}';
 		}
 
 	}
 
 	@Override
 	public String toString() {
-		return "Player{" + "target=" + target + ", eta=" + eta + ", score=" + score + ", expertise=" + this.getExpertise() + ", A=" + this.getMolecules('A') + ", B=" + this.getMolecules('B') + ", C=" + this.getMolecules('C') + ", D=" + this.getMolecules('D') + ", E=" + this.getMolecules('E') + ", mollecules=" + this.molecules() + '}';
+		return "Player{" + "target=" + target + ", eta=" + eta + ", score=" + score + ", expertise=" + this.expertise.toString() + ", A=" + this.getMolecules('A') + ", B=" + this.getMolecules('B') + ", C=" + this.getMolecules('C') + ", D=" + this.getMolecules('D') + ", E=" + this.getMolecules('E') + ", mollecules=" + this.molecules() + '}';
 	}
 
 	static String listToString(List<?> l, String delim) {
@@ -345,15 +382,19 @@ class Player {
 		return m;
 	}
 
-	private static void readProjects(Scanner in) {
+	private static List<MoleculeMap> readProjects(Scanner in) {
 		int projectCount = in.nextInt();
+		List<MoleculeMap> list = new ArrayList<>();
 		for (int i = 0; i < projectCount; i++) {
-			int a = in.nextInt();
-			int b = in.nextInt();
-			int c = in.nextInt();
-			int d = in.nextInt();
-			int e = in.nextInt();
+			MoleculeMap map = new MoleculeMap();
+			map.put('A', in.nextInt());
+			map.put('B', in.nextInt());
+			map.put('C', in.nextInt());
+			map.put('D', in.nextInt());
+			map.put('E', in.nextInt());
+			list.add(map);
 		}
+		return list;
 	}
 
 	private static void readPlayer(Scanner in, Player p) {
@@ -489,6 +530,13 @@ class Player {
 
 	static class MoleculeMap extends HashMap<Character, Integer> implements Molecules {
 
+		public MoleculeMap(Map<? extends Character, ? extends Integer> m) {
+			super(m);
+		}
+
+		public MoleculeMap() {
+		}
+
 		public void merge(MoleculeMap map) {
 			map.forEach((c, i) -> {
 				merge(c, i, (i1, i2) -> i1 + i2);
@@ -508,7 +556,7 @@ class Player {
 
 		public void removeMolecules(MoleculeMap map) {
 			map.forEach((c, i) -> {
-				merge(c, i, (i1, i2) -> i1 - i2);
+				merge(c, i, (i1, i2) -> Integer.max(i1 - i2, 0));
 			});
 		}
 
@@ -516,6 +564,11 @@ class Player {
 			return map.entrySet().stream()
 					.map(e -> e.getKey() + "=" + e.getValue())
 					.collect(joining(delim));
+		}
+
+		@Override
+		public String toString() {
+			return mapToString(this, ", ");
 		}
 	}
 }
