@@ -193,12 +193,12 @@ class Player {
 
 		List<Sample> incompleteSamples = incompleteSamples(samples).stream()
 				.sorted((s1, s2) -> {
-//					int pInd1 = projectIndex(sortedProjects, s1);
-//					int pInd2 = projectIndex(sortedProjects, s2);
-//					int cmp = Integer.compare(pInd1, pInd2);
-//					if (cmp != 0)
-//						return cmp;
-//					
+					int pInd1 = projectIndex(sortedProjects, s1);
+					int pInd2 = projectIndex(sortedProjects, s2);
+					int cmp = Integer.compare(pInd1, pInd2);
+					if (cmp != 0)
+						return cmp;
+					
 					List<Character> mols1 = moleculesToGet(missingMolecules(s1), availableMolecules);
 					List<Character> mols2 = moleculesToGet(missingMolecules(s2), availableMolecules);
 					return Integer.compare(mols1.size(), mols2.size());
