@@ -18,6 +18,7 @@ class Player {
 	private static final int MAX_SAMPLES = 3;
 	private static final int RANK_TWO_THRESHOLD = 12;
 	private static final int RANK_THREE_THRESHOLD = 25;
+	private List<Sample> samplesInCloud = new ArrayList<>();
 
 	private int getRank() {
 		if (this.getExpertise() > RANK_THREE_THRESHOLD) {
@@ -81,9 +82,12 @@ class Player {
 			if (diagnoseCmd.isPresent()) {
 				return diagnoseCmd.get();
 			}
-			if (putSampleToCloud.isPresent()) {
-				return putSampleToCloud.get();
-			}
+//			if (putSampleToCloud.isPresent()) {
+//				final Sample sample = ((PutSampleToCloud)putSampleToCloud.get()).sample;
+//				System.err.println("Put sample " + sample.sampleId + " to the cloud.");
+//				this.samplesInCloud.add(sample);
+//				return putSampleToCloud.get();
+//			}
 		}
 
 		Optional<Command> getSampleCmd = this.sampleAcquisition(mySamples, availableMolecules);
@@ -96,17 +100,28 @@ class Player {
 		}
 
 		Optional<Command> getMolecules = this.getMissingMolecules(mySamples, availableMolecules);
-		return getMolecules.orElseGet(()
-				-> this.produceMedicine(mySamples)
-				.orElseGet(() -> putSampleToCloud
-						.orElse(WAIT))
-		);
+		if (getMolecules.isPresent())
+			return getMolecules.get();
+		
+		Optional<Command> produceCmd = this.produceMedicine(mySamples);
+		if (produceCmd.isPresent())
+			return produceCmd.get();
+		
+		if (putSampleToCloud.isPresent()) {
+			final Sample sample = ((PutSampleToCloud)putSampleToCloud.get()).sample;
+			System.err.println("Put sample " + sample.sampleId + " to the cloud.");
+			return putSampleToCloud.get();
+		}
+		
+		return WAIT;
 	}
 
 	Optional<Command> getMissingMolecules(List<Sample> mySamples, MoleculeMap availableMolecules) {
 		if (this.molecules() >= 10) {
+			System.err.println("I am full.");
 			return Optional.empty();
 		}
+		System.err.println("Molecules: " + this.molecules() + " storage: " + this.storage.toString());
 		Optional<Character> molToGet = this.moleculeToGet(mySamples, availableMolecules);
 		if (this.molecules() < 10 && molToGet.isPresent()) {
 			return Optional.of(new GetMolecule(molToGet.get()));
@@ -152,13 +167,26 @@ class Player {
 	}
 
 	Optional<Command> sampleAcquisition(List<Sample> mySamples, MoleculeMap availableMolecules) {
-		if (mySamples.size() < MAX_SAMPLES) {
-			int rank = getRank();
-			System.err.println("Get sample ranked " + rank);
-			return Optional.of(new GetSample(rank));
-		}
-
-		return Optional.empty();
+		if (mySamples.size() == MAX_SAMPLES)
+			return Optional.empty();
+		
+		int rank = getRank();
+		
+//		if (!this.samplesInCloud.isEmpty()) {
+//			List<Sample> samplesOfRank = this.samplesInCloud.stream()
+//					.filter(s -> s.rank == rank)
+//					.collect(toList());
+//			if (!samplesOfRank.isEmpty()) {
+//				final List<Sample> cloudSamples = sortSamplesByAvailability(samplesOfRank, availableMolecules);
+//				System.err.println("Samples in cloud: " + listToString(cloudSamples, "\n"));
+//				this.samplesInCloud.remove(cloudSamples.get(0));
+//				return Optional.of(new GetSampleFromCloud(cloudSamples.get(0)));
+//			}
+//		}
+		
+		System.err.println("Get sample ranked " + rank);
+		return Optional.of(new GetSample(rank));
+		
 	}
 
 	private class ExpertiseMolecules implements Molecules {
@@ -169,6 +197,16 @@ class Player {
 		}
 	}
 
+	List<Sample> sortSamplesByAvailability(List<Sample> samples, Molecules available) {
+		return samples.stream()
+				.sorted((s1, s2) -> {
+					List<Character> m1 = missingMolecules(s1.cost, available);
+					List<Character> m2 = missingMolecules(s2.cost, available);
+					return Integer.compare(m1.size(), m2.size());
+				})
+				.collect(toList());
+	}
+	
 	List<MoleculeMap> sortedProjects(MoleculeMap availableMolecules) {
 		ExpertiseMolecules expertiseMolecules = new ExpertiseMolecules();
 		return projects.stream()
@@ -182,7 +220,7 @@ class Player {
 
 	int projectIndex(List<MoleculeMap> sortedProjects, Sample sample) {
 		for (int i = 0; i < sortedProjects.size(); i++) {
-			if (sortedProjects.get(i).get(sample.gain) > 0)
+			if (sortedProjects.get(i).getOrDefault(sample.gain, 0) > 0)
 				return i;
 		}
 		return Integer.MAX_VALUE;
@@ -248,23 +286,22 @@ class Player {
 	}
 
 	private List<Sample> completedSamples(List<Sample> samples) {
-		MoleculeMap moleculeMap = new MoleculeMap();
-		moleculeMap.putAll(storage);
-		moleculeMap.merge(expertise);
-		return this.getCompletedSamples(samples, moleculeMap);
+		return this.getCompletedSamples(samples, storage, expertise);
 	}
 
-	private List<Sample> getCompletedSamples(List<Sample> samples, MoleculeMap moleculeMap) {
+	private List<Sample> getCompletedSamples(List<Sample> samples, MoleculeMap storage, MoleculeMap expertise) {
 		if (samples.isEmpty()) {
 			return Collections.emptyList();
 		}
 
 		final ArrayList<Sample> list = new ArrayList<>();
 		final Sample sample = samples.get(0);
-		if (missingMolecules(sample.cost, moleculeMap).isEmpty()) {
+		MoleculeMap moleculeMap = new MoleculeMap(storage);
+		moleculeMap.merge(expertise);
+		if (sample.isDiagnosed() && missingMolecules(sample.cost, moleculeMap).isEmpty()) {
 			list.add(sample);
 			moleculeMap.removeMolecules(sample.cost);
-			list.addAll(getCompletedSamples(samples.subList(1, samples.size()), moleculeMap));
+			list.addAll(getCompletedSamples(samples.subList(1, samples.size()), moleculeMap, expertise));
 		}
 		return list;
 	}
@@ -342,7 +379,8 @@ class Player {
 			sample.sampleId = in.nextInt();
 			sample.carriedBy = in.nextInt();
 			sample.rank = in.nextInt();
-			sample.gain = in.next().charAt(0);
+			final String gain = in.next();
+			sample.gain = gain.length() > 0 ? gain.charAt(0) : ' ';
 			sample.health = in.nextInt();
 			sample.cost.put('A', in.nextInt());
 			sample.cost.put('B', in.nextInt());
@@ -496,9 +534,20 @@ class Player {
 	}
 
 	class PutSampleToCloud extends ConnectCommand {
+		final Sample sample;
 
 		public PutSampleToCloud(Sample sample) {
 			super(sample.sampleId, Module.DIAGNOSIS);
+			this.sample = sample;
+		}
+	}
+	
+	class GetSampleFromCloud extends ConnectCommand {
+		final Sample sample;
+
+		public GetSampleFromCloud(Sample sample) {
+			super(sample.sampleId, Module.DIAGNOSIS);
+			this.sample = sample;
 		}
 	}
 
