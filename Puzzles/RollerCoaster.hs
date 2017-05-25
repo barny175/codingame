@@ -19,31 +19,22 @@ main = do
         return (pi)
     
     -- hPutStrLn stderr $ "places: " ++ (show l) ++ " people: " ++ (show $ sum groups)
-    let sg = selectGroups groups l
-    -- hPutStrLn stderr $ show $ (sum $ fst sg) + (head $ snd sg)
+    let people = sum groups
     ct <- getCurrentTime
     hPutStrLn stderr $ show ct
-    putStrLn $ show $ ride l c groups
+    putStrLn $ show $ ride l c groups people
     ct <- getCurrentTime
     hPutStrLn stderr $ show ct
 
-selectGroups :: [Int] -> Int -> ([Int], [Int])
 selectGroups [] _ = ([], [])    
-selectGroups gs@(g:_) places
-    | g > places = ([], gs)
-    | selSum == places = (sel, drop pivot gs)
-    | selSum < places = let (sel', rest) = selectGroups (drop pivot gs) (places - selSum) in (sel ++ sel', rest)  
-    | selSum > places = let (sel', rest) = selectGroups sel places in (sel', drop (length sel') gs)
-    where len = length gs
-          pivot = len `div` 2
-          sel = take pivot gs
-          selSum = sum sel
+selectGroups groups@(g:gs) places 
+    | places == 0 || g > places= ([], groups)
+    | g <= places = (g:sg, rest)
+    where (sg,rest) = selectGroups gs (places - g)
 
-ride :: Int -> Int -> [Int] -> Int 
-ride places rides groups 
+ride places rides groups people 
     | rides == 0 = 0
-    | people < places = people + (ride places (rides - 1) groups)
+    | people < places = people + (ride places (rides - 1) groups people)
     | otherwise = dirhams
-    where people = sum groups
-          (sg, rest) = selectGroups groups places
-          dirhams = sum sg + (ride places (rides - 1) (rest ++ sg))
+    where (sg, rest) = selectGroups groups places
+          dirhams = sum sg + (ride places (rides - 1) (rest ++ sg) people)
