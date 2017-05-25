@@ -17,24 +17,6 @@ data Entity = Ship {sid :: Int, x :: Int, y :: Int, orientation :: Int, speed ::
               | Cannonball { cbid :: Int, x :: Int, y :: Int, tti :: Int , owner :: Int, etype :: String  }
               deriving (Show, Eq)
 
-readEntities entitycount =
-    replicateM entitycount $ do
-        input_line <- getLine
-        let input = words input_line
-        let entityid = read (input!!0) :: Int
-        let entitytype = input!!1
-        let x = read (input!!2) :: Int
-        let y = read (input!!3) :: Int
-        let arg1 = read (input!!4) :: Int
-        let arg2 = read (input!!5) :: Int
-        let arg3 = read (input!!6) :: Int
-        let owner = read (input!!7) :: Int
-        case entitytype of
-            "SHIP" -> return $ Ship { sid = entityid, x = x, y = y, orientation = arg1, speed = arg2, rum = arg3, owner = owner, etype = entitytype, canFire = True }
-            "BARREL" -> return $ Barrel { bid = entityid, x = x, y = y, amount = arg1, etype = entitytype }
-            "CANNONBALL"-> return $ Cannonball { cbid = entityid, x = x, y = y, owner = arg1, tti = arg2, etype = entitytype }
-            "MINE" -> return $ Mine { mid = entityid, x = x, y = y, etype = entitytype  }
-
 type ShipMap = M.Map Int Entity
 
 updateShips :: ShipMap -> [Entity] -> ShipMap
@@ -46,12 +28,12 @@ updateShip shipMap ship
     = let foundShip = M.lookup (sid ship) shipMap
       in maybe ship (\s -> ship { canFire = canFire (fromJust foundShip) }) foundShip
 
+readInt s= read s :: Int
+
 loop :: ShipMap  -> IO ()
 loop shipMap = do
-    input_line <- getLine
-    let myshipcount = read input_line :: Int -- the number of remaining ships
-    input_line <- getLine
-    let entitycount = read input_line :: Int -- the number of entities (e.g. ships, mines or cannonballs)
+    myshipcount <- readInt <$> getLine
+    entitycount <- read <$> getLine
 
     entities <- readEntities entitycount
     -- hPutStrLn stderr $ unlines $ map show entities
@@ -150,3 +132,20 @@ cubeDistance (q1, r1) (q2, r2) =
     let (x1, y1, z1) = toCubeCoord q1 r1
         (x2, y2, z2) = toCubeCoord q2 r2
     in (abs(x1 - x2) + abs(y1 - y2) + abs(z1 - z2)) `div` 2
+
+readEntities entitycount =
+    replicateM entitycount $ do
+        input <- words <$> getLine
+        let entityid = read (input!!0) :: Int
+            entitytype = input!!1
+            x = read (input!!2) :: Int
+            y = read (input!!3) :: Int
+            arg1 = read (input!!4) :: Int
+            arg2 = read (input!!5) :: Int
+            arg3 = read (input!!6) :: Int
+            owner = read (input!!7) :: Int
+        case entitytype of
+            "SHIP" -> return $ Ship { sid = entityid, x = x, y = y, orientation = arg1, speed = arg2, rum = arg3, owner = owner, etype = entitytype, canFire = True }
+            "BARREL" -> return $ Barrel { bid = entityid, x = x, y = y, amount = arg1, etype = entitytype }
+            "CANNONBALL"-> return $ Cannonball { cbid = entityid, x = x, y = y, owner = arg1, tti = arg2, etype = entitytype }
+            "MINE" -> return $ Mine { mid = entityid, x = x, y = y, etype = entitytype  }
