@@ -14,19 +14,21 @@ selectGroups groups@(g:gs) places
 
 splitGroups :: Array Int Int -> Int -> Int -> (Int, Int)
 splitGroups ga start places =
-    let waitingGroupCount = min (places - start) ((snd $ bounds ga) - start)
-        sumA n = sum $ map (\i -> ga ! i) (take n [start..])
-        sums = map sumA [1..waitingGroupCount]
+    let gaSize = (snd $ bounds ga) - (fst $ bounds ga) + 1
+        sumA n = sum $ map (\i -> ga ! (i `mod` gaSize)) (take n [start..])
+        sums = map sumA [1..gaSize]
         taken = length $ filter (<=places) sums
-    in (taken, if taken > 0 then sums !! (taken - 1) else 0)
---
-ride2 places rides groups start people
+    in (if start + taken > gaSize then taken - (gaSize - start) else taken + start, 
+        if taken > 0 then sums !! (taken - 1) else 0)
+
+ride2 places rides groups start
     | rides == 0 = 0
     | people < places = rides * people
     | otherwise = dirhams
-    where (takenGroups, sum') = splitGroups groups start places
-          rest = (start + takenGroups) `mod` places
-          dirhams = sum' + (ride2 places (rides - 1) groups rest people)
+    where people = sum groups
+          (takenGroups, sum') = splitGroups groups start places
+          rest = (start + takenGroups)
+          dirhams = sum' + (ride2 places (rides - 1) groups rest)
 
 ride places rides groups people
     | rides == 0 = 0
