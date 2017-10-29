@@ -28,6 +28,7 @@ executable RollerCoaster-exe
   build-depends:       base
                      , mtl
                      , time
+                     , array
                      , RollerCoaster
   default-language:    Haskell2010
 

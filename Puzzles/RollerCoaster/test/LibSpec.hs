@@ -40,6 +40,7 @@ ride2Spec :: Spec
 ride2Spec = do
     let groups = listArray (0, 4) [1..5]
         groups2 = listArray (0, 4) [1, 2, 3, 2, 4]
+        groups3 = listArray (0, 3) [3, 1 , 1, 2]
     describe "ride2" $ do
         it ("counts dirhams earned for 2 places and 1 ride for groups " ++ (show $ elems groups)) $ do
             ride2 2 1 groups 0 `shouldBe` 1
@@ -47,3 +48,5 @@ ride2Spec = do
             ride2 2 2 groups 0 `shouldBe` 3
         it ("counts dirhams earned for 5 places and 4 rides for groups " ++ (show $ elems groups2))  $ do
             ride2 5 4 groups2 0 `shouldBe` ((1+2) + (3+2) + (4+1) + (2+3))
+        it ("counts dirhams earned for 3 places and 3 rides for groups " ++ (show $ elems groups3))  $ do
+            ride2 3 3 groups3 0 `shouldBe` 7
