@@ -28,7 +28,7 @@ main = do
     hPutStrLn stderr $ show ct
     -- putStrLn $ show $ ride l c groups people
     -- let (res, log) = runWriter $ rideW l c (listArray (0, length groups - 1) groups) 0
-    putStrLn $ show $ ride2 l c (listArray (0, length groups - 1) groups) 0
+    putStrLn $ show $ ride l c groups
     -- putStrLn log
     ct <- getCurrentTime
     hPutStrLn stderr $ show ct
