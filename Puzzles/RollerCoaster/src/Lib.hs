@@ -2,7 +2,6 @@
 module Lib (ride, splitGroups, ride2, sumsElem, RollerCoaster(..)) where
 
 import Control.Monad
-import Control.Monad.RWS
 import Data.Array
 import qualified Data.Map as M
 import Data.Maybe
@@ -33,32 +32,20 @@ ride places' rides groups
     where people = groupSums' ! (asize groupSums' - 1)
           groupSums' = listArray (0, length groups - 1) $ scanl1 (+) groups
           rc = RollerCoaster {places = places' , groupSums = groupSums' }
-          (res, _, _) = runRWS (ride2 rides 0 0) rc M.empty
+          res = ride2 rides 0 0 rc M.empty
 
 data RollerCoaster = RollerCoaster { places :: Int, groupSums :: Array Int Int }
                         deriving Show
 
-ride2 :: Int -> Int -> Int -> RWS RollerCoaster [String] (M.Map Int (Int, Int)) Int
-ride2 rides start dirhams
-    | rides == 0 = return dirhams
-    | otherwise = do
-        places' <- asks places
-        groupSums' <- asks groupSums
-        config <- ask
-        rideToDirhamsMap <- get
+ride2 :: Int -> Int -> Int -> RollerCoaster -> (M.Map Int (Int, Int)) -> Int
+ride2 rides start dirhams config rideToDirhamsMap
+    | rides == 0 = dirhams
+    | M.member start  rideToDirhamsMap =
         let startLkp = M.lookup start rideToDirhamsMap
-            newRideToDirhamsMap = M.insert start (rides, dirhams) rideToDirhamsMap
-        tell ["rides: " ++ (show rides) ++ " start: " ++ (show start) ++ " dirhams: " ++ (show dirhams) ++ " r2dMap: " ++ (show rideToDirhamsMap) ++ " found " ++ (show startLkp)]
-        if isJust startLkp then do
-            let Just (prevRides, prevDirhams) = startLkp
-                (d, m) = rides `divMod` (prevRides - rides)
-                earnedDirhams = dirhams - prevDirhams
-                (result, _, w) = runRWS (ride2 m start (earnedDirhams * d + dirhams)) config M.empty
-            tell w
-            return result
-        else do
-            let (takenGroups, sum') = splitGroups groupSums' start places'
-                dirhams' = sum' + dirhams
-                (result, _, w) = runRWS (ride2 (rides - 1) takenGroups dirhams') config newRideToDirhamsMap
-            tell w
-            return result
+            Just (prevRides, prevDirhams) = startLkp
+            (d, m) = rides `divMod` (prevRides - rides)
+            earnedDirhams = dirhams - prevDirhams
+        in ride2 m start (earnedDirhams * d + dirhams) config M.empty
+    | otherwise = let (takenGroups, sum') = splitGroups (groupSums config) start (places config)
+                      newRideToDirhamsMap = M.insert start (rides, dirhams) rideToDirhamsMap
+                  in ride2 (rides - 1) takenGroups (sum' + dirhams) config newRideToDirhamsMap
