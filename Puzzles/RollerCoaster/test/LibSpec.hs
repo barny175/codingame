@@ -4,8 +4,10 @@ import Test.Hspec
 import Test.QuickCheck
 
 import Data.Array
-
+import Control.Monad.RWS
+import qualified Data.Map as M
 import Lib
+import Data.List
 
 main :: IO ()
 main = hspec spec
@@ -27,13 +29,15 @@ spec = do
             splitGroups groups 4 8 `shouldBe` (2, 8)
     it ("split " ++ (show $ elems groups2) ++ " to fill 5 places starting from 4") $ do
         splitGroups groups2 4 5 `shouldBe` (1, 5)
-  ride2Spec
+  rideSpec
+  ride2spec
 
-ride2Spec :: Spec
-ride2Spec = do
+rideSpec :: Spec
+rideSpec = do
     let groups = [1..5]
         groups2 = [1, 2, 3, 2, 4]
         groups3 = [3, 1 , 1, 2]
+        groups4 = [3, 1, 4, 2, 2]
     describe "ride" $ do
         it ("counts dirhams earned for 2 places and 1 ride for groups " ++ (show $ groups)) $ do
             ride 2 1 groups `shouldBe` 1
@@ -43,3 +47,15 @@ ride2Spec = do
             ride 5 4 groups2 `shouldBe` ((1+2) + (3+2) + (4+1) + (2+3))
         it ("counts dirhams earned for 3 places and 3 rides for groups " ++ (show $ groups3))  $ do
             ride 3 3 groups3 `shouldBe` 7
+        it ("counts dirhams earned for 4 places and 5 rides for groups " ++ (show $ groups4))  $ do
+            ride 4 5 groups4 `shouldBe` 20
+
+ride2spec = do
+    let groups = [3, 1, 4, 2, 2]
+        groupSums' = listArray (0, length groups - 1) $ scanl1 (+) groups
+        rc = RollerCoaster {places = 4 , groupSums = groupSums' }
+    describe "ride2" $ do
+        it ("ride2 5 0 0") $ do
+            let (res, s, w) = runRWS (ride2 5 0 0) rc M.empty
+            -- putStrLn $ concat $ intersperse "\n" w
+            res `shouldBe` 20
