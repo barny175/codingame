@@ -1,6 +1,5 @@
 package lastcrusade;
 
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.IntStream;
@@ -25,7 +24,7 @@ class Player {
     }
 
     enum Dir {
-        Top, Right, Bottom, Left;
+        TOP, RIGHT, BOTTOM, LEFT;
 
         Dir right() {
             return Dir.values()[(this.ordinal() + 1) % Dir.values().length];
@@ -37,20 +36,20 @@ class Player {
     }
 
     enum RoomType {
-        Type0(d -> Dir.Bottom),
-        Type1(d -> Dir.Bottom, Dir.Top, Dir.Left, Dir.Right),
-        Type2(d -> d == Dir.Left ? Dir.Right : Dir.Left, Dir.Left, Dir.Right),
-        Type3(d -> Dir.Bottom, Dir.Top),
-        Type4(d -> d == Dir.Top ? Dir.Left : Dir.Bottom, Dir.Top, Dir.Right),
-        Type5(d -> d == Dir.Top ? Dir.Right : Dir.Bottom, Dir.Top, Dir.Left),
-        Type6(d -> d == Dir.Left ? Dir.Right : Dir.Left, Dir.Left, Dir.Right),
-        Type7(d -> Dir.Bottom, Dir.Top, Dir.Right),
-        Type8(d -> Dir.Bottom, Dir.Left, Dir.Right),
-        Type9(d -> Dir.Bottom, Dir.Top, Dir.Left),
-        Type10(d -> Dir.Left, Dir.Top),
-        Type11(d -> Dir.Right, Dir.Top),
-        Type12(d -> Dir.Bottom, Dir.Right),
-        Type13(d -> Dir.Bottom, Dir.Left);
+        Type0(d -> Dir.BOTTOM),
+        Type1(d -> Dir.BOTTOM, Dir.TOP, Dir.LEFT, Dir.RIGHT),
+        Type2(d -> d == Dir.LEFT ? Dir.RIGHT : Dir.LEFT, Dir.LEFT, Dir.RIGHT),
+        Type3(d -> Dir.BOTTOM, Dir.TOP),
+        Type4(d -> d == Dir.TOP ? Dir.LEFT : Dir.BOTTOM, Dir.TOP, Dir.RIGHT),
+        Type5(d -> d == Dir.TOP ? Dir.RIGHT : Dir.BOTTOM, Dir.TOP, Dir.LEFT),
+        Type6(d -> d == Dir.LEFT ? Dir.RIGHT : Dir.LEFT, Dir.LEFT, Dir.RIGHT),
+        Type7(d -> Dir.BOTTOM, Dir.TOP, Dir.RIGHT),
+        Type8(d -> Dir.BOTTOM, Dir.LEFT, Dir.RIGHT),
+        Type9(d -> Dir.BOTTOM, Dir.TOP, Dir.LEFT),
+        Type10(d -> Dir.LEFT, Dir.TOP),
+        Type11(d -> Dir.RIGHT, Dir.TOP),
+        Type12(d -> Dir.BOTTOM, Dir.RIGHT),
+        Type13(d -> Dir.BOTTOM, Dir.LEFT);
         Function<Dir, Dir> exitFun;
         List<Dir> entries = new ArrayList<>();
 
@@ -92,13 +91,16 @@ class Player {
         }
         player.tunnel = new ArrayList<>();
         for (int i = 0; i < player.H; i++) {
-            List<Integer> line = IntStream.range(0, player.H)
+            List<Integer> line = IntStream.range(0, player.W)
                     .map(j -> in.nextInt())
+                    .peek(j -> System.err.print(j))
                     .mapToObj(Integer::valueOf)
                     .collect(toList());
+            System.err.println();
             player.tunnel.add(line);
         }
         player.exit = in.nextInt(); // the coordinate along the X axis of the exit.
+        System.err.println("Exit: " + player.exit);
         return player;
     }
 
@@ -116,9 +118,6 @@ class Player {
         int i = 0;
         // game loop
         while (true) {
-            XI = in.nextInt();
-            YI = in.nextInt();
-            POSI = Dir.valueOf(in.next());
             int R = in.nextInt(); // the number of rocks currently in the grid.
             for (int j = 0; j < R; j++) {
                 int XR = in.nextInt();
@@ -130,6 +129,11 @@ class Player {
                 System.out.println(commands.get(i++));
             else
                 System.out.println("WAIT");
+
+            XI = in.nextInt();
+            YI = in.nextInt();
+            POSI = Dir.valueOf(in.next());
+
         }
     }
 
@@ -156,16 +160,18 @@ class Player {
     }
 
     RoomType getRoomType(int rt) {
+        if (rt < 0)
+            rt = -rt;
         return RoomType.values()[rt < 0 ? -rt : rt];
     }
 
     Pos getNextRoom(Pos pos, Dir dir) {
         switch (dir) {
-            case Right:
+            case RIGHT:
                 return new Pos(pos.x + 1, pos.y);
-            case Bottom:
+            case BOTTOM:
                 return new Pos(pos.x, pos.y + 1);
-            case Left:
+            case LEFT:
                 return new Pos(pos.x - 1, pos.y);
             default:
                 return new Pos(pos.x, pos.y - 1);
@@ -251,17 +257,21 @@ class Player {
 
     List<Path> findPaths(Pos pos, Dir dir, Path path) {
         ArrayList<Path> paths = new ArrayList<>();
+        System.err.println("entering room at " + pos + " from " + dir);
         Path newPath = path.add(pos);
         if (pos.y == H - 1 && pos.x == exit) {
             paths.add(newPath);
             return paths;
         }
 
-        Optional<Dir> exitDir = getRoom(pos, path)
+        Optional<RoomType> room = getRoom(pos, path);
+        Optional<Dir> exitDir = room
                 .map(rt -> rt.exitFun.apply(dir));
 
-        if (!exitDir.isPresent())
+        if (!exitDir.isPresent()) {
+            System.err.println("no way to leave " + pos);
             return paths;
+        }
 
         Pos nextRoomPos = getNextRoom(pos, exitDir.get());
         Dir newEntryDir = exitDir.get().exitToEntry();
@@ -270,7 +280,10 @@ class Player {
         nextRoom
                 .filter(rt -> rt.entries.contains(newEntryDir))
                 .map(rt -> findPaths(nextRoomPos, newEntryDir, newPath))
-                .ifPresent(pths -> paths.addAll(pths));
+                .ifPresent(pths -> {
+                    paths.addAll(pths);
+                    System.err.println("no rotation at " + nextRoomPos);
+                });
 
         // rotation right
         nextRoom
@@ -278,7 +291,22 @@ class Player {
                 .filter(rt -> rt.entries.contains(newEntryDir))
                 .map(rt ->
                         findPaths(nextRoomPos, newEntryDir, newPath.addCommand(new RotateCommand(nextRoomPos,"RIGHT", this::rotateRight))))
-                .ifPresent(pths -> paths.addAll(pths));
+                .ifPresent(pths -> {
+                    paths.addAll(pths);
+                    System.err.println("right rotating " + nextRoomPos);
+                });
+
+
+        // rotation left
+        nextRoom
+                .map(rt -> rotateLeft(rt))
+                .filter(rt -> rt.entries.contains(newEntryDir))
+                .map(rt ->
+                        findPaths(nextRoomPos, newEntryDir, newPath.addCommand(new RotateCommand(nextRoomPos,"LEFT", this::rotateLeft))))
+                .ifPresent(pths -> {
+                    paths.addAll(pths);
+                    System.err.println("left rotating " + nextRoomPos);
+                });
 
         return paths;
     }
