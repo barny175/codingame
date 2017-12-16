@@ -151,12 +151,14 @@ class Player {
     }
 
     Optional<RoomType> getRotatedRoom(List<Command> commands, Pos pos) {
+        RoomType roomType = getRoomType(tunnel.get(pos.y).get(pos.x));
         return commands.stream()
                 .filter(cmd -> cmd instanceof RotateCommand)
                 .map(cmd -> (RotateCommand) cmd)
                 .filter(cmd -> cmd.roomPos.equals(pos))
-                .findFirst()
-                .map(cmd -> cmd.rotationFun.apply(getRoomType(tunnel.get(pos.y).get(pos.x))));
+                .map(cmd -> cmd.rotationFun)
+                .reduce((fun1, fun2) -> fun1.andThen(fun2))
+                .map(fun -> fun.apply(roomType));
     }
 
     RoomType getRoomType(int rt) {
@@ -277,6 +279,11 @@ class Player {
         Dir newEntryDir = exitDir.get().exitToEntry();
         // no rotation
         Optional<RoomType> nextRoom = getRoom(nextRoomPos, path);
+
+        if (!nextRoom.isPresent()) {
+            System.err.println("nowhere to go");
+        }
+
         nextRoom
                 .filter(rt -> rt.entries.contains(newEntryDir))
                 .map(rt -> findPaths(nextRoomPos, newEntryDir, newPath))
@@ -286,42 +293,38 @@ class Player {
                 });
 
         // rotation right
-        nextRoom
-                .map(rt -> rotateRight(rt))
-                .filter(rt -> rt.entries.contains(newEntryDir))
-                .map(rt ->
-                        findPaths(nextRoomPos, newEntryDir, newPath.addCommand(new RotateCommand(nextRoomPos,"RIGHT", this::rotateRight))))
-                .ifPresent(pths -> {
-                    paths.addAll(pths);
-                    System.err.println("right rotating " + nextRoomPos);
-                });
-
+        nextRoom.map(rt -> rotate(rt, newEntryDir, newPath, new RotateCommand(nextRoomPos,"RIGHT", this::rotateRight)))
+                .ifPresent(pths -> paths.addAll(pths));
 
         // rotation left
-        nextRoom
-                .map(rt -> rotateLeft(rt))
+        nextRoom.map(rt -> rotate(rt, newEntryDir, newPath, new RotateCommand(nextRoomPos,"LEFT", this::rotateLeft)))
+                .ifPresent(pths -> paths.addAll(pths));
+
+        // rotate twice
+        if (path.commandSlots >= 2) {
+            nextRoom.map(rt -> rotateRight(rt))
+                .map(this::rotateRight)
+                    .filter(rt -> nextRoom.filter(beforeRotation -> beforeRotation != rt).isPresent())
                 .filter(rt -> rt.entries.contains(newEntryDir))
-                .map(rt ->
-                        findPaths(nextRoomPos, newEntryDir, newPath.addCommand(new RotateCommand(nextRoomPos,"LEFT", this::rotateLeft))))
-                .ifPresent(pths -> {
-                    paths.addAll(pths);
-                    System.err.println("left rotating " + nextRoomPos);
+                .ifPresent(roomType -> {
+                    System.err.println("issuing two rotations");
+                    RotateCommand command = new RotateCommand(nextRoomPos, "RIGHT", this::rotateRight);
+                    paths.addAll(findPaths(nextRoomPos, newEntryDir, newPath.addCommand(command).addCommand(command)));
                 });
+        }
 
         return paths;
     }
-
-    List<RoomType> rotate(RoomType room, int allowedRotations) {
-        List<RoomType> result = new ArrayList<>();
-        result.add(room);
-        if (allowedRotations > 0) {
-            result.add(rotateRight(room));
-            result.add(rotateLeft(room));
-            if (allowedRotations > 1) {
-                result.add(rotateRight(rotateRight(room)));
-            }
+    List<Path> rotate(RoomType room, Dir entry, Path path, RotateCommand command) {
+        if (path.commandSlots == 0) {
+            return Collections.emptyList();
         }
-        return result.stream().distinct().collect(toList());
+        RoomType rotatedRoom = command.rotationFun.apply(room);
+        if (rotatedRoom.entries.contains(entry)) {
+            System.err.println("issuing command " + command);
+            return findPaths(command.roomPos, entry, path.addCommand(command));
+        }
+        return Collections.emptyList();
     }
 
     RoomType rotateRight(RoomType room) {

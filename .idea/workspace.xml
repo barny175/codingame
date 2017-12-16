@@ -15,23 +15,25 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="375">
-      <file leaf-file-name="Player.java" pinned="false" current-in-tab="false">
+      <file leaf-file-name="Player.java" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/JavaPuzzles/src/lastcrusade/Player.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="21">
-              <caret line="270" column="0" lean-forward="false" selection-start-line="270" selection-start-column="0" selection-end-line="270" selection-end-column="0" />
+            <state relative-caret-position="386">
+              <caret line="308" column="40" lean-forward="true" selection-start-line="308" selection-start-column="40" selection-end-line="308" selection-end-column="40" />
               <folding>
                 <element signature="imports" expanded="true" />
+                <element signature="e#10738#10739#0" expanded="true" />
+                <element signature="e#10817#10818#0" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="PlayerTest.java" pinned="false" current-in-tab="true">
+      <file leaf-file-name="PlayerTest.java" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/JavaPuzzles/test/lastcrusade/PlayerTest.java">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="50">
-              <caret line="156" column="38" lean-forward="false" selection-start-line="156" selection-start-column="38" selection-end-line="156" selection-end-column="38" />
+            <state relative-caret-position="449">
+              <caret line="175" column="49" lean-forward="false" selection-start-line="175" selection-start-column="49" selection-end-line="175" selection-end-column="49" />
               <folding>
                 <element signature="imports" expanded="true" />
               </folding>
@@ -57,6 +59,7 @@
       <find>getRoom</find>
       <find>rotatec</find>
       <find>main</find>
+      <find>out</find>
     </findStrings>
     <replaceStrings>
       <replace>roomTypeToExitMapping</replace>
@@ -113,8 +116,9 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="AndroidView" />
+      <pane id="Scope" />
+      <pane id="PackagesPane" />
       <pane id="Scratches" />
       <pane id="ProjectPane">
         <subPane>
@@ -153,7 +157,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="PackagesPane" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -265,31 +268,6 @@
       <envs />
       <patterns />
     </configuration>
-    <configuration name="PlayerTest.findPath_two_level_no_rotation" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
-      <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea">
-        <pattern>
-          <option name="PATTERN" value="lastcrusade.*" />
-          <option name="ENABLED" value="true" />
-        </pattern>
-      </extension>
-      <module name="JavaPuzzles" />
-      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
-      <option name="ALTERNATIVE_JRE_PATH" />
-      <option name="PACKAGE_NAME" value="lastcrusade" />
-      <option name="MAIN_CLASS_NAME" value="lastcrusade.PlayerTest" />
-      <option name="METHOD_NAME" value="findPath_two_level_no_rotation" />
-      <option name="TEST_OBJECT" value="method" />
-      <option name="VM_PARAMETERS" value="-ea" />
-      <option name="PARAMETERS" />
-      <option name="WORKING_DIRECTORY" value="$MODULE_DIR$" />
-      <option name="ENV_VARIABLES" />
-      <option name="PASS_PARENT_ENVS" value="true" />
-      <option name="TEST_SEARCH_SCOPE">
-        <value defaultName="singleModule" />
-      </option>
-      <envs />
-      <patterns />
-    </configuration>
     <configuration name="PlayerTest.findPath_two_level_rotation_right" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
       <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea">
         <pattern>
@@ -303,6 +281,31 @@
       <option name="PACKAGE_NAME" value="lastcrusade" />
       <option name="MAIN_CLASS_NAME" value="lastcrusade.PlayerTest" />
       <option name="METHOD_NAME" value="findPath_two_level_rotation_right" />
+      <option name="TEST_OBJECT" value="method" />
+      <option name="VM_PARAMETERS" value="-ea" />
+      <option name="PARAMETERS" />
+      <option name="WORKING_DIRECTORY" value="$MODULE_DIR$" />
+      <option name="ENV_VARIABLES" />
+      <option name="PASS_PARENT_ENVS" value="true" />
+      <option name="TEST_SEARCH_SCOPE">
+        <value defaultName="singleModule" />
+      </option>
+      <envs />
+      <patterns />
+    </configuration>
+    <configuration name="PlayerTest.findPath_two_rotations_of_same_room" type="JUnit" factoryName="JUnit" temporary="true" nameIsGenerated="true">
+      <extension name="coverage" enabled="false" merge="false" sample_coverage="true" runner="idea">
+        <pattern>
+          <option name="PATTERN" value="lastcrusade.*" />
+          <option name="ENABLED" value="true" />
+        </pattern>
+      </extension>
+      <module name="JavaPuzzles" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
+      <option name="PACKAGE_NAME" value="lastcrusade" />
+      <option name="MAIN_CLASS_NAME" value="lastcrusade.PlayerTest" />
+      <option name="METHOD_NAME" value="findPath_two_rotations_of_same_room" />
       <option name="TEST_OBJECT" value="method" />
       <option name="VM_PARAMETERS" value="-ea" />
       <option name="PARAMETERS" />
@@ -397,18 +400,18 @@
     </configuration>
     <list size="5">
       <item index="0" class="java.lang.String" itemvalue="Android JUnit.PlayerTest" />
-      <item index="1" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_two_level_no_rotation" />
-      <item index="2" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_two_level_rotation_right" />
-      <item index="3" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_four_level" />
-      <item index="4" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_many_rotations" />
+      <item index="1" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_two_level_rotation_right" />
+      <item index="2" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_four_level" />
+      <item index="3" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_many_rotations" />
+      <item index="4" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_two_rotations_of_same_room" />
     </list>
     <recent_temporary>
       <list size="5">
         <item index="0" class="java.lang.String" itemvalue="Android JUnit.PlayerTest" />
-        <item index="1" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_many_rotations" />
-        <item index="2" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_four_level" />
-        <item index="3" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_two_level_rotation_right" />
-        <item index="4" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_two_level_no_rotation" />
+        <item index="1" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_two_rotations_of_same_room" />
+        <item index="2" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_many_rotations" />
+        <item index="3" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_four_level" />
+        <item index="4" class="java.lang.String" itemvalue="JUnit.PlayerTest.findPath_two_level_rotation_right" />
       </list>
     </recent_temporary>
   </component>
@@ -431,39 +434,40 @@
     <servers />
   </component>
   <component name="TestHistory">
-    <history-entry file="PlayerTest - 2017.12.13 at 05h 42m 13s.xml">
+    <history-entry file="PlayerTest - 2017.12.16 at 07h 44m 33s.xml">
       <configuration name="PlayerTest" configurationId="AndroidJUnit" />
     </history-entry>
-    <history-entry file="PlayerTest - 2017.12.13 at 05h 48m 11s.xml">
+    <history-entry file="PlayerTest - 2017.12.16 at 07h 49m 34s.xml">
       <configuration name="PlayerTest" configurationId="AndroidJUnit" />
     </history-entry>
-    <history-entry file="PlayerTest_findPath_many_rotations - 2017.12.13 at 05h 33m 48s.xml">
-      <configuration name="PlayerTest.findPath_many_rotations" configurationId="JUnit" />
+    <history-entry file="PlayerTest - 2017.12.16 at 07h 50m 38s.xml">
+      <configuration name="PlayerTest" configurationId="AndroidJUnit" />
     </history-entry>
-    <history-entry file="PlayerTest_findPath_many_rotations - 2017.12.13 at 05h 37m 06s.xml">
-      <configuration name="PlayerTest.findPath_many_rotations" configurationId="JUnit" />
+    <history-entry file="PlayerTest - 2017.12.16 at 07h 50m 49s.xml">
+      <configuration name="PlayerTest" configurationId="AndroidJUnit" />
     </history-entry>
-    <history-entry file="PlayerTest_findPath_many_rotations - 2017.12.13 at 05h 37m 30s.xml">
-      <configuration name="PlayerTest.findPath_many_rotations" configurationId="JUnit" />
+    <history-entry file="PlayerTest - 2017.12.16 at 14h 22m 25s.xml">
+      <configuration name="PlayerTest" configurationId="AndroidJUnit" />
     </history-entry>
-    <history-entry file="PlayerTest_findPath_many_rotations - 2017.12.13 at 05h 38m 17s.xml">
-      <configuration name="PlayerTest.findPath_many_rotations" configurationId="JUnit" />
+    <history-entry file="PlayerTest_findPath_two_rotations_of_same_room - 2017.12.16 at 07h 58m 09s.xml">
+      <configuration name="PlayerTest.findPath_two_rotations_of_same_room" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="PlayerTest_findPath_many_rotations - 2017.12.13 at 05h 38m 30s.xml">
-      <configuration name="PlayerTest.findPath_many_rotations" configurationId="JUnit" />
+    <history-entry file="PlayerTest_findPath_two_rotations_of_same_room - 2017.12.16 at 14h 13m 28s.xml">
+      <configuration name="PlayerTest.findPath_two_rotations_of_same_room" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="PlayerTest_findPath_many_rotations - 2017.12.13 at 05h 39m 27s.xml">
-      <configuration name="PlayerTest.findPath_many_rotations" configurationId="JUnit" />
+    <history-entry file="PlayerTest_findPath_two_rotations_of_same_room - 2017.12.16 at 14h 20m 39s.xml">
+      <configuration name="PlayerTest.findPath_two_rotations_of_same_room" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="PlayerTest_findPath_many_rotations - 2017.12.13 at 05h 40m 15s.xml">
-      <configuration name="PlayerTest.findPath_many_rotations" configurationId="JUnit" />
+    <history-entry file="PlayerTest_findPath_two_rotations_of_same_room - 2017.12.16 at 14h 21m 01s.xml">
+      <configuration name="PlayerTest.findPath_two_rotations_of_same_room" configurationId="JUnit" />
     </history-entry>
-    <history-entry file="PlayerTest_findPath_many_rotations - 2017.12.13 at 05h 41m 35s.xml">
-      <configuration name="PlayerTest.findPath_many_rotations" configurationId="JUnit" />
+    <history-entry file="PlayerTest_findPath_two_rotations_of_same_room - 2017.12.16 at 14h 21m 45s.xml">
+      <configuration name="PlayerTest.findPath_two_rotations_of_same_room" configurationId="JUnit" />
     </history-entry>
   </component>
   <component name="ToolWindowManager">
     <frame x="-9" y="-9" width="1938" height="1048" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
@@ -473,7 +477,7 @@
       <window_info id="Capture Analysis" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="false" weight="0.32975295" sideWeight="0.5" order="3" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.3290398" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.3290398" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Capture Tool" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
@@ -525,7 +529,7 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="java-line">
           <url>file://$PROJECT_DIR$/JavaPuzzles/src/lastcrusade/Player.java</url>
-          <line>261</line>
+          <line>263</line>
           <properties />
           <option name="timeStamp" value="28" />
         </line-breakpoint>
@@ -555,6 +559,8 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#10738#10739#0" expanded="true" />
+            <element signature="e#10817#10818#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -575,6 +581,8 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#10738#10739#0" expanded="true" />
+            <element signature="e#10817#10818#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -595,6 +603,8 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#10738#10739#0" expanded="true" />
+            <element signature="e#10817#10818#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -615,6 +625,8 @@
           <caret line="217" column="58" lean-forward="false" selection-start-line="217" selection-start-column="58" selection-end-line="217" selection-end-column="58" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#10738#10739#0" expanded="true" />
+            <element signature="e#10817#10818#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -635,6 +647,8 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#10738#10739#0" expanded="true" />
+            <element signature="e#10817#10818#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -655,6 +669,8 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#10738#10739#0" expanded="true" />
+            <element signature="e#10817#10818#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -675,6 +691,8 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#10738#10739#0" expanded="true" />
+            <element signature="e#10817#10818#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -695,6 +713,8 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#10738#10739#0" expanded="true" />
+            <element signature="e#10817#10818#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -715,6 +735,8 @@
           <caret line="0" column="0" lean-forward="false" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#10738#10739#0" expanded="true" />
+            <element signature="e#10817#10818#0" expanded="true" />
           </folding>
         </state>
       </provider>
@@ -964,22 +986,24 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/JavaPuzzles/src/lastcrusade/Player.java">
+    <entry file="file://$PROJECT_DIR$/JavaPuzzles/test/lastcrusade/PlayerTest.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="21">
-          <caret line="270" column="0" lean-forward="false" selection-start-line="270" selection-start-column="0" selection-end-line="270" selection-end-column="0" />
+        <state relative-caret-position="449">
+          <caret line="175" column="49" lean-forward="false" selection-start-line="175" selection-start-column="49" selection-end-line="175" selection-end-column="49" />
           <folding>
             <element signature="imports" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/JavaPuzzles/test/lastcrusade/PlayerTest.java">
+    <entry file="file://$PROJECT_DIR$/JavaPuzzles/src/lastcrusade/Player.java">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="50">
-          <caret line="156" column="38" lean-forward="false" selection-start-line="156" selection-start-column="38" selection-end-line="156" selection-end-column="38" />
+        <state relative-caret-position="386">
+          <caret line="308" column="40" lean-forward="true" selection-start-line="308" selection-start-column="40" selection-end-line="308" selection-end-column="40" />
           <folding>
             <element signature="imports" expanded="true" />
+            <element signature="e#10738#10739#0" expanded="true" />
+            <element signature="e#10817#10818#0" expanded="true" />
           </folding>
         </state>
       </provider>

@@ -157,10 +157,10 @@ public class PlayerTest {
     public void findPath_two_rotations_of_same_room() {
         ArrayList<List<Integer>> tunnel = new ArrayList<>();
         tunnel.add(Lists.newArrayList(0, -3, 0, 0));
-        tunnel.add(Lists.newArrayList(0, 2, 0, 0));
+        tunnel.add(Lists.newArrayList(0, 3, 0, 0));
         tunnel.add(Lists.newArrayList(0, 13, 13, 0));
         tunnel.add(Lists.newArrayList(0, 0, -3, 0));
-        Player player = new Player(4, 4, tunnel, 0);
+        Player player = new Player(4, 4, tunnel, 2);
         List<Player.Path> paths = player.findPaths(1, 0, Player.Dir.TOP);
         assertThat(paths).hasSize(1);
         assertThat(paths.get(0).positions)
@@ -173,6 +173,6 @@ public class PlayerTest {
                         tuple(2, 3));
         assertThat(paths.get(0).getCommands())
                 .extracting(Player.Command::toString)
-                .contains("1 1 LEFT", "1 1 LEFT");
+                .contains("1 2 RIGHT", "1 2 RIGHT");
     }
 }
