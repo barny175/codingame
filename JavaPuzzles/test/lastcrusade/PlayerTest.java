@@ -18,6 +18,14 @@ public class PlayerTest {
     }
 
     @Test
+    public void roomRotate() {
+
+        assertThat(Player.rotateRight(Player.RoomType.Type8))
+                .isEqualTo(Player.RoomType.Type9);
+        assertThat(Player.rotateRight(Player.RoomType.Type9))
+                .isEqualTo(Player.RoomType.Type6);
+    }
+    @Test
     public void findPath_one_level() {
         ArrayList<List<Integer>> tunnel = new ArrayList<>();
         tunnel.add(Lists.newArrayList(0, 3, 0));
@@ -185,6 +193,6 @@ public class PlayerTest {
         tunnel.add(Lists.newArrayList(0, 0, -3, 0));
         Player player = new Player(4, 4, tunnel, 2);
         List<Player.Path> paths = player.findPaths(1, 0, Player.Dir.TOP);
-        assertThat(paths).hasSize(2);
+        assertThat(paths).hasSize(1);
     }
 }

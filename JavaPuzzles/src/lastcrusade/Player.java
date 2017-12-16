@@ -93,20 +93,31 @@ class Player {
         for (int i = 0; i < player.H; i++) {
             List<Integer> line = IntStream.range(0, player.W)
                     .map(j -> in.nextInt())
-                    .peek(j -> System.err.print(j))
                     .mapToObj(Integer::valueOf)
                     .collect(toList());
-            System.err.println();
             player.tunnel.add(line);
         }
         player.exit = in.nextInt(); // the coordinate along the X axis of the exit.
-        System.err.println("Exit: " + player.exit);
         return player;
     }
 
     public static void main(String args[]) {
-        Scanner in = new Scanner(System.in);
-
+        String input = "13 10\n" +
+                "-3 12 8 6 3 2 7 2 7 0 0 0 0\n" +
+                "11 5 13 0 0 0 3 0 3 0 0 0 0\n" +
+                "0 11 2 2 3 3 8 2 -9 2 3 13 0\n" +
+                "0 0 0 0 0 12 8 3 1 3 2 7 0\n" +
+                "0 0 11 2 3 1 5 2 10 0 0 11 13\n" +
+                "0 0 3 0 0 6 8 0 0 0 0 0 2\n" +
+                "0 0 11 3 3 10 11 2 3 2 3 2 8\n" +
+                "0 12 6 3 2 3 3 6 3 3 2 3 12\n" +
+                "0 11 4 2 3 2 2 11 12 13 13 13 0\n" +
+                "0 0 -3 12 7 8 13 13 4 5 4 10 0\n" +
+                "2\n" +
+                "0 0 TOP\n" +
+                "0";
+//        Scanner in = new Scanner(System.in);
+        Scanner in = new Scanner(input);
         Player player = Player.init(in);
 
         int XI = in.nextInt();
@@ -161,7 +172,7 @@ class Player {
                 .map(fun -> fun.apply(roomType));
     }
 
-    RoomType getRoomType(int rt) {
+    static RoomType getRoomType(int rt) {
         if (rt < 0)
             rt = -rt;
         return RoomType.values()[rt < 0 ? -rt : rt];
@@ -259,7 +270,6 @@ class Player {
 
     List<Path> findPaths(Pos pos, Dir dir, Path path) {
         ArrayList<Path> paths = new ArrayList<>();
-        System.err.println("entering room at " + pos + " from " + dir);
         Path newPath = path.add(pos);
         if (pos.y == H - 1 && pos.x == exit) {
             paths.add(newPath);
@@ -270,8 +280,10 @@ class Player {
         Optional<Dir> exitDir = room
                 .map(rt -> rt.exitFun.apply(dir));
 
+        debug("entering room " + room.get() + " at " + pos + " from " + dir);
+
         if (!exitDir.isPresent()) {
-            System.err.println("no way to leave " + pos);
+            debug("no way to leave " + pos);
             return paths;
         }
 
@@ -281,7 +293,7 @@ class Player {
         Optional<RoomType> nextRoom = getRoom(nextRoomPos, path);
 
         if (!nextRoom.isPresent()) {
-            System.err.println("nowhere to go");
+            debug("nowhere to go");
         }
 
         nextRoom
@@ -289,45 +301,60 @@ class Player {
                 .map(rt -> findPaths(nextRoomPos, newEntryDir, newPath))
                 .ifPresent(pths -> {
                     paths.addAll(pths);
-                    System.err.println("no rotation at " + nextRoomPos);
+                    debug("no rotation at " + nextRoomPos);
                 });
 
+        if (!paths.isEmpty())
+            return paths;
+
         // rotation right
-        nextRoom.map(rt -> rotate(rt, newEntryDir, newPath, new RotateCommand(nextRoomPos,"RIGHT", this::rotateRight)))
+        nextRoom.map(rt -> rotate(rt, newEntryDir, newPath, new RotateCommand(nextRoomPos,"RIGHT", Player::rotateRight)))
                 .ifPresent(pths -> paths.addAll(pths));
+
+        if (!paths.isEmpty())
+            return paths;
 
         // rotation left
         nextRoom.map(rt -> rotate(rt, newEntryDir, newPath, new RotateCommand(nextRoomPos,"LEFT", this::rotateLeft)))
                 .ifPresent(pths -> paths.addAll(pths));
 
+        if (!paths.isEmpty())
+            return paths;
+
         // rotate twice
-        if (path.commandSlots >= 2) {
-            nextRoom.map(rt -> rotateRight(rt))
-                .map(this::rotateRight)
+        if (newPath.commandSlots >= 2) {
+            nextRoom
+                    .map(Player::rotateRight)
+                .map(Player::rotateRight)
                     .filter(rt -> nextRoom.filter(beforeRotation -> beforeRotation != rt).isPresent())
                 .filter(rt -> rt.entries.contains(newEntryDir))
                 .ifPresent(roomType -> {
-                    System.err.println("issuing two rotations");
-                    RotateCommand command = new RotateCommand(nextRoomPos, "RIGHT", this::rotateRight);
+                    debug("issuing two rotations");
+                    RotateCommand command = new RotateCommand(nextRoomPos, "RIGHT", Player::rotateRight);
                     paths.addAll(findPaths(nextRoomPos, newEntryDir, newPath.addCommand(command).addCommand(command)));
                 });
         }
 
         return paths;
     }
+
+    private void debug(String msg) {
+        System.err.println(msg);
+    }
+
     List<Path> rotate(RoomType room, Dir entry, Path path, RotateCommand command) {
         if (path.commandSlots == 0) {
             return Collections.emptyList();
         }
         RoomType rotatedRoom = command.rotationFun.apply(room);
         if (rotatedRoom.entries.contains(entry)) {
-            System.err.println("issuing command " + command);
+            debug("issuing command " + command);
             return findPaths(command.roomPos, entry, path.addCommand(command));
         }
         return Collections.emptyList();
     }
 
-    RoomType rotateRight(RoomType room) {
+    static RoomType rotateRight(RoomType room) {
         return getRoomType(roomTypeRotationMapping.get(room.ordinal()));
     }
 
