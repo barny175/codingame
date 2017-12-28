@@ -21,3 +21,4 @@ cabal.project.local
 scala_puzzles/target
 out/
 .idea/workspace.xml
+kotlin/.idea/workspace.xml
